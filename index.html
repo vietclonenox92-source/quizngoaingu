@@ -1,0 +1,1280 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Tiếng Nhật Online</title>
+    <style>
+        :root { --primary: #3498db; --secondary: #e67e22; --dark: #2c3e50; --success: #27ae60; --danger: #c0392b; --bg: #f4f6f9; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: var(--bg); padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 500px; width: 100%; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { text-align: center; font-size: 20px; margin-bottom: 15px; color: var(--dark); }
+        .mode-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: #ecf0f1; }
+        .mode-btn.active { background: var(--primary); color: white; }
+        .mode-btn.active-ng { background: var(--secondary); color: white; }
+        .question-box { background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 8px; text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 10px; min-height: 80px; display: flex; align-items: center; justify-content: center; }
+        .result-box { text-align: center; font-style: italic; min-height: 40px; margin-bottom: 15px; font-size: 14px; }
+        .choices-grid { display: flex; flex-direction: column; gap: 10px; }
+        .choice-btn { width: 100%; padding: 14px; font-size: 16px; background: var(--dark); color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .choice-btn.correct { background: var(--success) !important; }
+        .choice-btn.wrong { background: var(--danger) !important; }
+        .footer-row { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+        .score { font-size: 16px; font-weight: bold; color: var(--success); }
+        .next-btn { padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>JAPANESE QUIZ ONLINE</h1>
+    <div class="mode-container">
+        <button class="mode-btn active" id="btn-tuvung" onclick="switchMode('TuVung')">Từ Vựng</button>
+        <button class="mode-btn" id="btn-nguphap" onclick="switchMode('NguPhap')">Ngữ Pháp</button>
+    </div>
+    
+    <div class="question-box" id="question">Đang tải...</div>
+    <div class="result-box" id="result">Hãy chọn một đáp án!</div>
+    
+    <div class="choices-grid">
+        <button class="choice-btn" onclick="checkAnswer(0)"></button>
+        <button class="choice-btn" onclick="checkAnswer(1)"></button>
+        <button class="choice-btn" onclick="checkAnswer(2)"></button>
+        <button class="choice-btn" onclick="checkAnswer(3)"></button>
+    </div>
+    
+    <div class="footer-row">
+        <div class="score" id="score">Điểm: 0/0</div>
+        <button class="next-btn" id="next-btn" onclick="nextQuestion()">Tiếp theo ➡️</button>
+    </div>
+</div>
+
+<script>
+    // --- BẠN DÁN DỮ LIỆU VÀO ĐÂY ---
+    
+    const dataTuVung = `
+食べる (たべる) | Ăn | Uống | Ngủ | Đi
+先生 (せんせい) | Giáo viên | Học sinh | Bác sĩ | Kỹ sư
+会議 (かいぎ) | Cuộc họp | Công ty | Giám đốc | Sản xuất
+出張 (しゅっちょう) | Đi công tác | Nghỉ phép | Tăng ca | Đi làm
+残業 (ざんぎょう) | Làm thêm giờ | Nghỉ trưa | Xin việc | Sa thải
+給料 (きゅうりょう) | Tiền lương | Thuế | Bảo hiểm | Phí đi lại
+雇用 (こよう) | Thuê mướn | Từ chức | Thăng tiến | Đào tạo
+昇進 (しょうしん) | Thăng tiến | Nghỉ việc | Chuyển công tác | Tuyển dụng
+研修 (けんしゅう) | Đào tạo/Thực tập | Họp báo | Phỏng vấn | Nghỉ lễ
+面接 (めんせつ) | Phỏng vấn | Chào hỏi | Giới thiệu | Ký tên
+履歴書 (りれきしょ) | Sơ yếu lý lịch | Hợp đồng | Hóa đơn | Báo cáo
+10. 契約 (けいやく) | Hợp đồng | Tạm ứng | Thanh toán | Chấm dứt
+11. 部署 (ぶしょ) | Phòng ban | Chức vụ | Công ty con | Trụ sở chính
+12. 役職 (やくしょく) | Chức vụ | Tên gọi | Địa chỉ | Tiền thưởng
+13. 社長 (しゃちょう) | Giám đốc | Trưởng phòng | Nhân viên | Khách hàng
+14. 部長 (ぶちょう) | Trưởng phòng | Tổ trưởng | Giám đốc | Thư ký
+15. 課長 (かちょう) | Trưởng nhóm/Khối | Nhân sự | Kế toán | Bảo vệ
+16. 同僚 (どうりょう) | Đồng nghiệp | Cấp trên | Cấp dưới | Khách đối tác
+17. 部下 (ぶか) | Cấp dưới | Bạn bè | Người thân | Đối thủ
+18. 上司 (じょうし) | Cấp trên | Hậu bối | Tiền bối | Người quen
+19. 取引先 (とりひきさき) | Khách hàng/Đối tác | Nhà kho | Công trường | Bưu điện
+20. 顧客 (こきゃく) | Khách hàng | Nhân viên | Người làm thuê | Chủ nợ
+21. 工場 (こうじょう) | Nhà máy | Văn phòng | Cửa hàng | Trường học
+22. 生産 (せいさん) | Sản xuất | Tiêu dùng | Nhập khẩu | Bán lẻ
+23. 製造 (せいぞう) | Chế tạo | Thiết kế | Lắp ráp | Vận chuyển
+24. 製品 (せいひん) | Thành phẩm | Nguyên liệu | Linh kiện | Rác thải
+25. 在庫 (ざいこ) | Hàng tồn kho | Hàng mới | Hàng giả | Hàng mẫu
+26. 納期 (のうき) | Thời hạn giao hàng | Ngày sản xuất | Ngày nghỉ | Ngày họp
+27. 品質 (ひんしつ) | Chất lượng | Số lượng | Kích thước | Trọng lượng
+28. 検品 (けんぴん) | Kiểm tra hàng | Đóng gói | Dán nhãn | Xuất kho
+29. 出荷 (しゅっか) | Xuất hàng | Nhập hàng | Trả hàng | Hủy hàng
+30. 入庫 (にゅうこ) | Nhập kho | Thanh lý | Kiểm kho | Bán hàng
+31. 材料 (ざいりょう) | Nguyên liệu | Sản phẩm | Công cụ | Máy móc
+32. 部品 (ぶひん) | Linh kiện | Máy tính | Tài liệu | Thiết bị
+33. 設備 (せつび) | Thiết bị | Nhà ở | Xe cộ | Trang phục
+34. 効率 (こうりつ) | Hiệu suất | Lãng phí | Chậm trễ | Sai sót
+35. 改善 (かいぜん) | Cải tiến | Giữ nguyên | Làm hỏng | Thay thế
+36. 安全 (あんぜん) | An toàn | Nguy hiểm | Độc hại | Cẩn thận
+37. 点検 (てんけん) | Kiểm tra định kỳ | Sửa chữa | Thay mới | Vận hành
+38. 故障 (こしょう) | Hỏng hóc | Hoạt động | Nâng cấp | Bảo trì
+39. 修理 (しゅうり) | Sửa chữa | Mua mới | Vứt bỏ | Cho mượn
+40. 注文 (ちゅうもん) | Đặt hàng | Hủy bỏ | Giao hàng | Trả tiền
+41. 報告 (ほうこく) | Báo cáo | Thảo luận | Liên lạc | Xin lỗi
+42. 連絡 (れんらく) | Liên lạc | Im lặng | Quên | Nhầm lẫn
+43. 相談 (そうだん) | Thảo luận/Bàn bạc | Ra lệnh | Phê bình | Khen ngợi
+44. 資料 (しりょう) | Tài liệu | Sách vở | Tranh ảnh | Phim ảnh
+45. 予算 (よさん) | Ngân sách | Lợi nhuận | Chi phí | Doanh thu
+46. 利益 (りえき) | Lợi nhuận | Thua lỗ | Nợ nần | Thuế phí
+47. 経費 (けいひ) | Kinh phí | Tiết kiệm | Đầu tư | Vay vốn
+48. 営業 (えいぎょう) | Kinh doanh | Sản xuất | Hành chính | Kỹ thuật
+49. 開発 (かいはつ) | Phát triển | Kết thúc | Duy trì | Sao chép
+50. 設計 (せっけい) | Thiết kế | Thi công | Giám sát | Nghiệm thu
+技術 (ぎじゅつ) | Kỹ thuật | Mỹ thuật | Nghệ thuật | Chiến thuật
+労働 (ろうどう) | Lao động | Nghỉ ngơi | Vui chơi | Học tập
+作業 (さぎょう) | Thao tác/Công việc | Nghỉ giải lao | Ngủ gật | Đi chơi
+手順 (てじゅん) | Trình tự | Kết quả | Lý do | Mục đích
+規格 (きかく) | Quy cách/Tiêu chuẩn | Giá cả | Màu sắc | Hình dáng
+現場 (げんば) | Hiện trường/Nhà xưởng | Văn phòng | Nhà riêng | Trường học
+金型 (かながた) | Khuôn đúc | Máy khoan | Cưa máy | Búa điện
+部品 (ぶひん) | Linh kiện | Thành phẩm | Phế liệu | Bao bì
+組立 (くみたて) | Lắp ráp | Tháo dỡ | Sơn sửa | Đóng gói
+加工 (かこう) | Gia công | Mua bán | Vận chuyển | Lưu kho
+寸法 (すんぽう) | Kích thước | Trọng lượng | Màu sắc | Độ bền
+誤差 (ごさ) | Sai số | Chính xác | Kết quả | Công thức
+測定 (そくてい) | Đo lường | Phán đoán | Suy luận | Ước tính
+研磨 (けんま) | Mài bóng | Cắt gọt | Hàn xì | Sơn màu
+溶接 (ようせつ) | Hàn | Khoan | Đục | Cưa
+塗装 (とそう) | Sơn | Lau chùi | Rửa sạch | Quét dọn
+点検 (てんけん) | Kiểm tra | Phá hủy | Sử dụng | Bỏ qua
+保守 (ほしゅ) | Bảo trì | Tấn công | Sửa đổi | Xây dựng
+運用 (うんよう) | Vận hành | Ngừng máy | Vứt bỏ | Mua sắm
+稼働 (かどう) | Hoạt động (máy) | Đứng yên | Hỏng hóc | Cháy nổ
+停止 (ていし) | Tạm dừng | Tiếp tục | Khởi động | Tăng tốc
+効率 (こうりつ) | Hiệu suất | Lãng phí | Thất bại | Trở ngại
+無駄 (むだ) | Lãng phí | Hữu ích | Cần thiết | Quý giá
+承認 (しょうにん) | Phê duyệt | Từ chối | Phản đối | Xem xét
+許可 (きょか) | Cho phép | Cấm đoán | Bắt buộc | Nhắc nhở
+指示 (しじ) | Chỉ thị | Hỏi han | Tâm sự | Nhờ vả
+報告書 (ほうこくしょ) | Bản báo cáo | Hợp đồng | Tờ rơi | Hóa đơn
+企画 (きかく) | Kế hoạch/Quy hoạch | Thực hiện | Kết thúc | Báo cáo
+予算 (よさん) | Ngân sách | Lợi nhuận | Tiền phạt | Tiền lẻ
+経費 (けいひ) | Chi phí | Thu nhập | Tiền lương | Tiền thưởng
+請求書 (せいきゅうしょ) | Hóa đơn yêu cầu thanh toán | Giấy mời | Danh thiếp | Vé xe
+領収書 (りょうしゅうしょ) | Biên lai | Đơn hàng | Bảng lương | Tờ khai
+期限 (きげん) | Thời hạn | Quá khứ | Tương lai | Hiện tại
+延期 (えんき) | Trì hoãn | Đẩy nhanh | Hoàn thành | Hủy bỏ
+中止 (ちゅうし) | Hủy bỏ/Ngừng | Bắt đầu | Duy trì | Đẩy mạnh
+交渉 (こうしょう) | Thương lượng | Cãi nhau | Chào hỏi | Giới thiệu
+提携 (ていけい) | Hợp tác | Đối đầu | Cạnh tranh | Tách rời
+競合 (きょうごう) | Cạnh tranh | Giúp đỡ | Nhượng bộ | Thỏa hiệp
+市場 (しじょう) | Thị trường | Nhà kho | Công trường | Cửa hàng
+需要 (じゅよう) | Nhu cầu | Cung cấp | Sản xuất | Tiêu dùng
+供給 (きょうきゅう) | Cung cấp | Đòi hỏi | Tiêu thụ | Lưu kho
+販路 (はんろ) | Kênh bán hàng | Đường đi | Lối thoát | Cổng vào
+広告 (こうこく) | Quảng cáo | Tin nhắn | Thư từ | Điện thoại
+宣伝 (せんでん) | Tuyên truyền/PR | Giấu kín | Phê bình | Điều tra
+在庫 (ざいこ) | Tồn kho | Hàng mới | Hàng cũ | Hàng giả
+返品 (へんぴん) | Trả lại hàng | Mua hàng | Đặt hàng | Giao hàng
+発送 (はっそう) | Gửi hàng | Nhận hàng | Trả hàng | Giữ hàng
+輸送 (ゆそう) | Vận chuyển | Đi bộ | Đứng yên | Bay lượn
+倉庫 (そうこ) | Nhà kho | Phòng họp | Phòng khách | Nhà bếp
+福利厚生 (ふくりこうせい) | Phúc lợi | Tiền phạt | Thuế | Bảo hiểm
+出勤 (しゅっきん) | Đi làm | Nghỉ việc | Tăng ca | Về sớm
+欠勤 (けっきん) | Nghỉ làm | Đi làm | Công tác | Trễ giờ
+遅刻 (ちこく) | Đi trễ | Về sớm | Nghỉ phép | Tăng ca
+早退 (そうたい) | Về sớm | Đi muộn | Nghỉ làm | Công tác
+有給休暇 (ゆうきゅうきゅうか) | Nghỉ phép có lương | Nghỉ không lương | Nghỉ lễ | Nghỉ trưa
+直行 (ちょっこう) | Đến thẳng nơi công tác | Về nhà | Đi làm | Nghỉ việc
+直帰 (ちょっき) | Từ nơi công tác về thẳng nhà | Đến công ty | Đi họp | Đi ăn
+残業手当 (ざんぎょうてあて) | Trợ cấp tăng ca | Tiền thưởng | Lương cơ bản | Thuế thu nhập
+基本給 (きほんきゅう) | Lương cơ bản | Tiền thưởng | Trợ cấp | Hoa hồng
+源泉徴収 (げんせんちょうしゅう) | Thuế thu nhập tại nguồn | Tiền bảo hiểm | Lương ròng | Tiền thưởng
+健康診断 (けんこうしんだん) | Khám sức khỏe | Kiểm tra máy | Đào tạo | Phỏng vấn
+自己紹介 (じこしょうかい) | Giới thiệu bản thân | Báo cáo công việc | Chào khách | Thảo luận
+名刺 (めいし) | Danh thiếp | Thẻ nhân viên | Hộ chiếu | Giấy phép
+印鑑 (いんかん) | Con dấu | Bút viết | Giấy tờ | Chữ ký
+受付 (うけつけ) | Quầy lễ tân | Nhà kho | Nhà xưởng | Phòng họp
+応接室 (おうせつしつ) | Phòng tiếp khách | Nhà vệ sinh | Nhà xe | Phòng ăn
+会議室 (かいぎしつ) | Phòng họp | Nhà bếp | Sân thượng | Cửa ra vào
+事務室 (じむしつ) | Phòng làm việc | Phòng tắm | Phòng ngủ | Phòng máy
+更衣室 (こういしつ) | Phòng thay đồ | Phòng khách | Nhà kho | Nhà xưởng
+休憩所 (きゅうけいじょ) | Chỗ nghỉ ngơi | Nơi làm việc | Cổng bảo vệ | Bãi đỗ xe
+禁煙 (きんえん) | Cấm hút thuốc | Cho phép hút thuốc | Nơi hút thuốc | Bán thuốc lá
+火気厳禁 (かきげんきん) | Cấm lửa | Cấm hút thuốc | Cấm chụp ảnh | Cấm vào
+立ち入り禁止 (たちいりきんし) | Cấm vào | Lối ra | Lối vào | Đường tắt
+整理 (せいり) | Sàng lọc (S1) | Sắp xếp | Sạch sẽ | Săn sóc
+整頓 (せいとん) | Sắp xếp (S2) | Sàng lọc | Săn sóc | Sẵn sàng
+清掃 (せいそう) | Sạch sẽ (S3) | Sàng lọc | Sắp xếp | Săn sóc
+清潔 (せいけつ) | Săn sóc (S4) | Sạch sẽ | Sắp xếp | Sẵn sàng
+躾 (しつけ) | Sẵn sàng (S5) | Sàng lọc | Sạch sẽ | Sắp xếp
+安全靴 (あんぜんぐつ) | Giày bảo hộ | Giày thể thao | Dép lê | Ủng đi mưa
+保護メガネ (ほごめがね) | Kính bảo hộ | Kính cận | Kính râm | Kính hiển vi
+軍手 (ぐんて) | Găng tay bảo hộ | Mũ bảo hiểm | Khẩu trang | Tạp đề
+防塵マスク (ぼうじんますく) | Khẩu trang chống bụi | Mũ bảo hộ | Nút bịt tai | Kính mắt
+ヘルメット (へるめっと) | Mũ bảo hiểm | Găng tay | Áo khoác | Giày
+作業着 (さぎょうぎ) | Quần áo bảo hộ | Đồ vest | Đồ bơi | Đồ ngủ
+私服 (しふく) | Quần áo bình thường | Đồng phục | Đồ bảo hộ | Áo mưa
+始業 (しぎょう) | Bắt đầu công việc | Kết thúc công việc | Nghỉ trưa | Nghỉ lễ
+終業 (しゅうぎょう) | Kết thúc công việc | Bắt đầu công việc | Đi làm | Tăng ca
+昼休み (ひるやすみ) | Nghỉ trưa | Nghỉ tối | Nghỉ lễ | Nghỉ bù
+交替制 (こうたいせい) | Chế độ làm theo ca | Làm hành chính | Làm tự do | Nghỉ việc
+夜勤 (やきん) | Làm ca đêm | Làm ca ngày | Nghỉ phép | Đi công tác
+日勤 (にっきん) | Làm ca ngày | Làm ca đêm | Nghỉ lễ | Tăng ca
+手当 (てあて) | Phụ cấp/Trợ cấp | Tiền phạt | Tiền thuế | Tiền nợ
+昇給 (しょうきゅう) | Tăng lương | Giảm lương | Giữ lương | Cắt lương
+賞与 (しょうよ) | Tiền thưởng | Tiền lương | Tiền phạt | Thuế
+試用期間 (しようきかん) | Thời gian thử việc | Thời gian nghỉ phép | Thời gian tăng ca | Thời gian nghỉ hưu
+正社員 (せいしゃいん) | Nhân viên chính thức | Nhân viên thời vụ | Thực tập sinh | Người làm thêm
+派遣社員 (はけんしゃいん) | Nhân viên phái cử | Giám đốc | Trưởng phòng | Chủ tịch
+契約社員 (けいやくしゃいん) | Nhân viên hợp đồng | Nhân viên biên chế | Giám đốc | Khách hàng
+アルバイト (あるばいと) | Làm thêm | Làm chính thức | Nghỉ việc | Thăng chức
+退職 (たいしょく) | Nghỉ việc | Đi làm | Nhận chức | Thăng tiến
+外注 (がいちゅう) | Thuê ngoài (Outsource) | Sản xuất nội bộ | Nhập khẩu | Xuất khẩu
+納期 (のうき) | Thời hạn giao hàng | Ngày bắt đầu | Ngày nghỉ | Ngày họp
+歩留まり (ぶどまり) | Tỷ lệ thành phẩm | Tỷ lệ hàng lỗi | Trọng lượng | Kích thước
+不良品 (ふりょうひん) | Hàng lỗi | Hàng mới | Hàng mẫu | Hàng tặng
+良品 (りょうひん) | Hàng đạt chất lượng | Hàng hỏng | Hàng giả | Hàng cũ
+廃棄 (はいき) | Tiêu hủy/Vứt bỏ | Lưu kho | Sử dụng | Sửa chữa
+再加工 (さいかこう) | Gia công lại | Đóng gói | Xuất kho | Kiểm hàng
+原材料 (げんざいりょう) | Nguyên vật liệu | Máy móc | Nhà xưởng | Con người
+半製品 (はんせいひん) | Bán thành phẩm | Thành phẩm | Phế liệu | Linh kiện
+仕掛品 (しかかりひん) | Sản phẩm dở dang | Hàng tồn kho | Hàng xuất | Hàng nhập
+仕入 (しいれ) | Nhập hàng/Mua hàng | Bán hàng | Tặng hàng | Trả hàng
+納品 (のうひん) | Giao hàng | Nhận hàng | Hủy hàng | Đặt hàng
+検収 (けんしゅう) | Kiểm tra nghiệm thu | Sản xuất | Thiết kế | Quảng cáo
+棚卸し (たなおろし) | Kiểm kê hàng hóa | Lau dọn | Sơn sửa | Vận hành
+段取り (だんどり) | Chuẩn bị/Thiết lập | Kết thúc | Báo cáo | Phê duyệt
+稼働率 (かどうりつ) | Tỷ lệ hoạt động | Tỷ lệ lỗi | Tỷ lệ nghỉ | Tỷ lệ thuế
+金型 (かながた) | Khuôn mẫu | Ốc vít | Dây điện | Máy cắt
+治具 (じぐ) | Đồ gá/Dụng cụ hỗ trợ | Máy tính | Bàn làm việc | Xe đẩy
+台車 (だいしゃ) | Xe đẩy hàng | Xe khách | Xe đạp | Máy bay
+棚 (たな) | Cái giá/kệ | Cái bàn | Cái ghế | Cái cửa
+パレット (ぱれっと) | Tấm pallet | Cái thùng | Túi nilon | Cuộn băng dính
+段ボール (だんぼーる) | Thùng carton | Giấy văn phòng | Vải vụn | Kim loại
+コンテナ (こんてな) | Thùng chứa/Công-ten-nơ | Xe máy | Bình nước | Túi xách
+計量 (けいりょう) | Cân đo | Cắt gọt | Lau chùi | Đóng dấu
+研磨 (けんま) | Mài/Đánh bóng | Hàn | Khoan | Đục
+切断 (せつだん) | Cắt rời | Dán lại | Nối lại | Uốn cong
+溶接 (ようせつ) | Hàn | Sơn | Cưa | Vặn
+塗装 (とそう) | Sơn phủ | Rửa | Sấy | Đục
+乾燥 (かんそう) | Làm khô/Sấy | Làm ướt | Làm bẩn | Làm hỏng
+冷却 (れいきゃく) | Làm lạnh | Đun nóng | Làm khô | Ép chặt
+圧縮 (あっしゅく) | Nén | Giãn | Cắt | Nối
+振動 (しんどう) | Rung động | Đứng yên | Quay tròn | Bay lên
+摩擦 (まさつ) | Ma sát | Trơn trượt | Bay hơi | Đông đặc
+摩耗 (まもう) | Mài mòn | Làm mới | Tăng kích thước | Giữ nguyên
+潤滑油 (じゅんかつゆ) | Dầu nhờn | Nước giải khát | Xăng | Cồn
+温度計 (おんどけい) | Nhiệt kế | Thước dây | Cân | Đồng hồ bấm giờ
+気圧 (きあつ) | Áp suất khí | Nhiệt độ | Độ ẩm | Độ sáng
+湿度 (しつど) | Độ ẩm | Độ cao | Độ dài | Độ rộng
+騒音 (そうおん) | Tiếng ồn | Âm nhạc | Yên tĩnh | Tiếng vang
+換気 (かんき) | Thông gió | Chiếu sáng | Cách âm | Chống cháy
+整理 (せいり) | Sàng lọc | Sắp xếp | Sạch sẽ | Săn sóc
+整頓 (せいとん) | Sắp xếp | Sàng lọc | Săn sóc | Sẵn sàng
+清掃 (せいそう) | Sạch sẽ | Sàng lọc | Sắp xếp | Sẵn sàng
+清潔 (せいけつ) | Săn sóc | Sạch sẽ | Sắp xếp | Sàng lọc
+躾 (しつけ) | Sẵn sàng | Săn sóc | Sạch sẽ | Sắp xếp
+安全第一 (あんぜんだいいち) | An toàn là trên hết | Tăng năng suất | Tiết kiệm | Làm nhanh
+危険 (きけん) | Nguy hiểm | An toàn | May mắn | Bình thường
+注意 (ちゅうい) | Chú ý | Bỏ qua | Quên lãng | Làm ngơ
+禁止 (きんし) | Cấm | Cho phép | Khuyến khích | Tự do
+義務 (ぎむ) | Nghĩa vụ/Bắt buộc | Quyền lợi | Sở thích | Mong muốn
+稟議 (りんぎ) | Phê duyệt nội bộ | Từ chối | Báo cáo | Thảo luận
+決裁 (けっさい) | Quyết định/Phê chuẩn | Xem xét | Đề xuất | Trì hoãn
+起案 (きあん) | Soạn thảo đề án | Kết thúc | Hủy bỏ | Kiểm tra
+定例会 (ていれいかい) | Họp định kỳ | Họp khẩn cấp | Tiệc công ty | Phỏng vấn
+議事録 (ぎじろく) | Biên bản cuộc họp | Danh thiếp | Hợp đồng | Hóa đơn
+回覧 (かいらん) | Gửi xem xung quanh | Giữ bí mật | Vứt bỏ | Lưu trữ
+共有 (きょうゆう) | Chia sẻ | Giấu kín | Độc quyền | Xóa bỏ
+機密 (きみつ) | Bí mật | Công khai | Quảng cáo | Tin tức
+漏洩 (ろうえい) | Rò rỉ (thông tin) | Bảo mật | Lưu trữ | Thu nhận
+原本 (げんぽん) | Bản gốc | Bản sao | Bản nháp | Bản dịch
+副本 (ふくほん) | Bản sao/Bản phụ | Bản chính | Bản gốc | Bản thảo
+締切 (しめきり) | Hạn chót | Bắt đầu | Tạm dừng | Kéo dài
+進捗 (しんちょく) | Tiến độ | Kết quả | Lý do | Trở ngại
+遅延 (ちえん) | Trì trệ/Chậm trễ | Nhanh chóng | Hoàn thành | Bắt đầu
+前倒し (まえだおし) | Làm sớm hơn dự định | Làm muộn | Hủy bỏ | Tạm ngưng
+後回し (あとまわし) | Để sau/Hoãn lại | Làm ngay | Ưu tiên | Hoàn tất
+優先順位 (ゆうせんじゅんい) | Thứ tự ưu tiên | Thứ tự ngẫu nhiên | Không quan trọng | Thứ tự ngược
+段取り (だんどり) | Các bước chuẩn bị | Kết quả | Lý do | Sai sót
+効率化 (こうりつか) | Hiệu suất hóa | Lãng phí | Chậm trễ | Phức tạp hóa
+自動化 (じどうか) | Tự động hóa | Thủ công | Bán tự động | Ngừng máy
+省力化 (しょうりょくか) | Tiết kiệm sức lao động | Thuê thêm người | Làm nặng thêm | Nghỉ ngơi
+コスト削減 (こすとさくげん) | Cắt giảm chi phí | Tăng chi phí | Giữ nguyên giá | Đầu tư thêm
+予算案 (よさんあん) | Dự thảo ngân sách | Bảng lương | Hợp đồng | Hóa đơn
+実績 (じっせき) | Thành tích/Kết quả thực tế | Kế hoạch | Dự định | Ước mơ
+目標 (もくひょう) | Mục tiêu | Quá khứ | Sai lầm | Kết quả
+達成 (たっせい) | Đạt được | Thất bại | Từ bỏ | Bắt đầu
+未達 (みたつ) | Chưa đạt được | Hoàn thành | Xuất sắc | Vượt mức
+分析 (ぶんせき) | Phân tích | Tổng hợp | Dự đoán | Sáng tạo
+評価 (ひょうか) | Đánh giá | Phê bình | Khen ngợi | Chỉ trích
+改善策 (かいぜんさく) | Kế hoạch cải tiến | Nguyên nhân | Kết quả | Sai lầm
+対策 (たいさく) | Đối sách/Biện pháp | Vấn đề | Rắc rối | Câu hỏi
+原因 (げんいん) | Nguyên nhân | Kết quả | Tương lai | Mục đích
+結果 (けっか) | Kết quả | Nguyên nhân | Khởi đầu | Quá trình
+仮説 (かせつ) | Giả thuyết | Sự thật | Kết luận | Chứng cứ
+検証 (けんしょう) | Kiểm chứng | Bỏ qua | Đoán mò | Tưởng tượng
+報告 (ほうこく) | Báo cáo | Thảo luận | Liên lạc | Xin lỗi
+連絡 (れんらく) | Liên lạc | Im lặng | Quên | Nhầm lẫn
+相談 (そうだん) | Thảo luận | Ra lệnh | Phê bình | Khen ngợi
+承諾 (しょうだく) | Chấp thuận | Từ chối | Phản đối | Xem xét
+拒否 (きょひ) | Từ chối | Đồng ý | Hoan nghênh | Chấp nhận
+保留 (ほりゅう) | Bảo lưu/Gác lại | Quyết định | Hủy bỏ | Thực hiện
+委託 (いたく) | Ủy thác | Tự làm | Thu hồi | Hủy bỏ
+責任 (せきにん) | Trách nhiệm | Quyền lợi | Tự do | Vui vẻ
+権限 (けんげん) | Quyền hạn | Nghĩa vụ | Công việc | Sở thích
+担当 (たんとう) | Đảm trách/Phụ trách | Nghỉ ngơi | Giúp đỡ | Quan sát
+引継ぎ (ひきつぎ) | Bàn giao công việc | Nhận việc | Nghỉ việc | Thăng chức
+異動 (いどう) | Thay đổi vị trí | Giữ nguyên | Thăng chức | Sa thải
+左遷 (させん) | Giáng chức | Thăng chức | Tuyển dụng | Khen thưởng
+派遣 (はけん) | Phái cử | Thuê mướn | Sa thải | Nghỉ hưu
+出向 (しゅっこう) | Biệt phái | Nghỉ việc | Đi học | Đi chơi
+回路 (かいろ) | Mạch điện | Con đường | Ống nước | Cửa sổ
+基板 (きばん) | Bảng mạch | Vỏ máy | Bánh xe | Dây cáp
+配線 (はいせん) | Đi dây điện | Cắt cỏ | Quét nhà | Sơn tường
+絶縁 (ぜつえん) | Cách điện | Dẫn điện | Chập điện | Cháy nổ
+短絡 (たんらく) | Đoản mạch/Chập điện | Nối điện | Cách điện | Tiết kiệm điện
+電圧 (でんあつ) | Điện áp | Cường độ | Điện trở | Công suất
+電流 (でんりゅう) | Dòng điện | Điện áp | Điện trở | Tần số
+抵抗 (ていこう) | Điện trở | Công tắc | Bóng đèn | Phích cắm
+容量 (ようりょう) | Dung lượng | Trọng lượng | Chiều dài | Chiều rộng
+端子 (たんし) | Đầu nối/Cực | Dây dẫn | Nguồn điện | Công tắc
+電源 (でんげん) | Nguồn điện | Máy phát | Pin | Sạc
+スイッチ (すいっち) | Công tắc | Bóng đèn | Cửa | Máy tính
+センサー (せんさー) | Cảm biến | Màn hình | Bàn phím | Chuột
+モーター (もーたー) | Động cơ | Bánh răng | Dây xích | Thùng xe
+軸受 (じくうけ) | Vòng bi | Trục máy | Bánh răng | Đai ốc
+歯車 (はぐるま) | Bánh răng | Vòng bi | Ốc vít | Lò xo
+ネジ (ねじ) | Ốc vít | Đinh | Keo | Búa
+ボルト (ぼると) | Bu lông | Đai ốc | Vít | Kìm
+ナット (なっと) | Đai ốc | Bu lông | Vít | Búa
+工具 (こうぐ) | Dụng cụ/Đồ nghề | Máy móc | Thiết bị | Vật liệu
+金槌 (かなづち) | Cái búa | Cái kìm | Cái tua vít | Cái cưa
+万力 (まんりき) | Cái ê tô | Cái bàn | Cái ghế | Cái tủ
+旋盤 (せんばん) | Máy tiện | Máy phay | Máy khoan | Máy mài
+フライス盤 (ふらいすばん) | Máy phay | Máy tiện | Máy bào | Máy ép
+研削盤 (けんさくばん) | Máy mài | Máy khoan | Máy cắt | Máy hàn
+プレス機 (ぷれすき) | Máy ép | Máy kéo | Máy thổi | Máy hút
+溶接機 (ようせつき) | Máy hàn | Máy cắt | Máy khoan | Máy mài
+鋳造 (ちゅうぞう) | Đúc | Rèn | Hàn | Cắt
+鍛造 (たんぞう) | Rèn | Đúc | Hàn | Sơn
+熱処理 (ねつしょり) | Xử lý nhiệt | Làm lạnh | Sơn màu | Đóng gói
+表面処理 (ひょうめんしょり) | Xử lý bề mặt | Lắp ráp | Vận chuyển | Lưu kho
+研磨 (けんま) | Mài bóng | Hàn | Cắt | Khoan
+潤滑 (じゅんかつ) | Bôi trơn | Làm nhám | Làm bẩn | Làm hỏng
+腐食 (ふしょく) | Ăn mòn | Làm mới | Sơn phủ | Bảo vệ
+錆 (さび) | Rỉ sét | Sáng bóng | Mới | Bền
+亀裂 (きれつ) | Vết nứt | Vết xước | Vết bẩn | Vết sơn
+摩耗 (まもう) | Hao mòn | Tăng thêm | Giữ nguyên | Làm sạch
+破損 (はそん) | Hư hỏng | Sửa chữa | Hoàn thành | Bắt đầu
+変形 (へんけい) | Biến dạng | Giữ nguyên | Làm mới | Đẹp hơn
+寸法 (すんぽう) | Kích thước | Trọng lượng | Màu sắc | Độ bền
+公差 (こうさ) | Dung sai | Chính xác | Sai lệch | Kết quả
+精度 (せいど) | Độ chính xác | Sai số | Trọng lượng | Chiều dài
+感度 (かんど) | Độ nhạy | Độ bền | Độ cứng | Độ bóng
+強度 (きょうど) | Cường độ/Độ bền | Độ mềm | Độ dẻo | Độ ẩm
+硬度 (こうど) | Độ cứng | Độ mềm | Độ dẻo | Độ dai
+密度 (みつど) | Mật độ | Khoảng cách | Độ dài | Độ rộng
+粘度 (ねんど) | Độ nhớt | Độ cứng | Độ dai | Độ bền
+流量 (りゅうりょう) | Lưu lượng | Trọng lượng | Áp suất | Nhiệt độ
+圧力 (あつりょく) | Áp lực | Nhiệt độ | Độ ẩm | Ánh sáng
+真空 (しんくう) | Chân không | Không khí | Nước | Đất
+品質管理 (ひんしつかんり) | Quản lý chất lượng | Quản lý nhân sự | Quản lý tài chính | Quản lý sản xuất
+品質保証 (ひんしつほしょう) | Đảm bảo chất lượng | Kiểm tra hàng | Đóng gói | Vận chuyển
+検査 (けんさ) | Kiểm tra | Sản xuất | Thiết kế | Bán hàng
+全数検査 (ぜんすうけんさ) | Kiểm tra 100% | Kiểm tra xác suất | Không kiểm tra | Kiểm tra mẫu
+抜取検査 (ぬきとりけんさ) | Kiểm tra lấy mẫu | Kiểm tra toàn bộ | Kiểm tra lại | Kiểm tra thử
+外観検査 (がいかんけんさ) | Kiểm tra ngoại quan | Kiểm tra chức năng | Kiểm tra trọng lượng | Kiểm tra độ bền
+性能試験 (せいのうしけん) | Thử nghiệm hiệu năng | Kiểm tra màu sắc | Kiểm tra kích thước | Kiểm tra bao bì
+不良率 (ふりょうりつ) | Tỷ lệ lỗi | Tỷ lệ đạt | Tỷ lệ nghỉ | Tỷ lệ thuế
+歩留まり (ぶどまり) | Tỷ lệ thành phẩm | Tỷ lệ phế liệu | Tỷ lệ hỏng | Tỷ lệ mất mát
+基準 (きじゅん) | Tiêu chuẩn/Căn cứ | Sai lệch | Tự do | Ngẫu nhiên
+規定 (きてい) | Quy định | Gợi ý | Thói quen | Sở thích
+手順書 (てじゅんしょ) | Sách hướng dẫn trình tự | Hợp đồng | Hóa đơn | Danh thiếp
+仕様書 (しようしょ) | Bản đặc tả/Thông số | Báo cáo | Thư mời | Lịch hẹn
+図面 (ずめん) | Bản vẽ | Tranh ảnh | Sách giáo khoa | Tờ rơi
+修正 (しゅうせい) | Chỉnh sửa | Giữ nguyên | Phá hủy | Làm hỏng
+訂正 (ていせい) | Đính chính | Thêm mới | Xóa bỏ | Bỏ qua
+更新 (こうしん) | Cập nhật | Giữ cũ | Hủy bỏ | Kết thúc
+有効期限 (ゆうこうきげん) | Thời hạn có hiệu lực | Ngày sản xuất | Ngày nhập kho | Ngày xuất kho
+合格 (ごうかく) | Đỗ/Đạt | Trượt | Chờ đợi | Hủy bỏ
+不合格 (ふごうかく) | Không đạt/Trượt | Đỗ | Thành công | Xuất sắc
+再送 (さいそう) | Gửi lại | Nhận hàng | Hủy hàng | Lưu kho
+返却 (へんきゃく) | Trả lại | Mua về | Cho mượn | Vứt đi
+回収 (かいしゅう) | Thu hồi | Phát ra | Bán đi | Tặng quà
+破棄 (はき) | Hủy bỏ/Vứt đi | Giữ lại | Sử dụng | Sửa chữa
+流出 (りゅうしゅつ) | Rò rỉ/Lọt ra ngoài | Giữ lại | Thu nhận | Đóng gói
+再発防止 (さいはつぼうし) | Phòng ngừa tái diễn | Để nó xảy ra | Khen thưởng | Bỏ qua
+未然防止 (みぜんぼうし) | Phòng ngừa trước | Sửa chữa sau | Chờ đợi | Theo dõi
+安全点検 (あんぜんてんけん) | Kiểm tra an toàn | Kiểm tra máy | Kiểm tra lương | Kiểm tra hàng
+危険予知 (きけんよち) | Dự đoán nguy hiểm | Gặp nguy hiểm | Bỏ qua nguy hiểm | Tạo ra nguy hiểm
+防護策 (ぼうごさく) | Biện pháp bảo vệ | Biện pháp tấn công | Biện pháp hủy hoại | Biện pháp trốn tránh
+非常口 (ひじょうぐち) | Lối thoát hiểm | Cửa chính | Cửa sổ | Nhà kho
+消火器 (しょうかき) | Bình chữa cháy | Vòi nước | Xẻng | Thang
+避難 (ひなん) | Lánh nạn | Tập trung | Làm việc | Ngủ
+負傷 (ふしょう) | Bị thương | Khỏe mạnh | Vui vẻ | Giàu có
+応急処置 (おうきゅうしょち) | Sơ cứu tạm thời | Phẫu thuật | Khám bệnh | Nhập viện
+労災 (ろうさい) | Tai nạn lao động | Thưởng tết | Lương tháng | Nghỉ lễ
+安全靴 (あんぜんぐつ) | Giày bảo hộ | Dép lê | Giày tây | Giày vải
+保護帽 (ほごぼう) | Mũ bảo hộ | Mũ len | Mũ lưỡi trai | Mũ rộng vành
+安全帯 (あんぜんたい) | Dây an toàn | Thắt lưng | Dây thừng | Dây xích
+感電 (かんでん) | Điện giật | Bỏng | Ngã | Đau đầu
+酸欠 (さんけつ) | Thiếu oxy | Thừa oxy | Đủ oxy | Không có oxy
+中毒 (ちゅうどく) | Ngộ độc | Khỏe mạnh | Say rượu | Buồn ngủ
+爆発 (ばくはつ) | Phát nổ | Im lặng | Xịt | Đóng băng
+火災 (かさい) | Hỏa hoạn | Lũ lụt | Động đất | Sóng thần
+停電 (ていでん) | Mất điện | Có điện | Cháy bóng đèn | Hỏng máy
+断水 (だんすい) | Mất nước | Có nước | Rò rỉ nước | Nước bẩn
+整理 (せいり) | Sàng lọc | Sắp xếp | Sạch sẽ | Săn sóc
+整頓 (せいとん) | Sắp xếp | Sàng lọc | Săn sóc | Sẵn sàng
+清掃 (せいそう) | Sạch sẽ | Sàng lọc | Sắp xếp | Săn sóc
+清潔 (せいけつ) | Săn sóc | Sạch sẽ | Sắp xếp | Sẵn sàng
+荷役 (にやく) | Bốc dỡ hàng hóa | Đóng gói | Kiểm kho | Lắp ráp
+積み込み (つみこみ) | Xếp hàng lên xe | Dỡ hàng xuống | Đóng thùng | Ghi nhãn
+荷下ろし (におろし) | Dỡ hàng xuống | Xếp hàng lên | Kiểm hàng | Cân hàng
+運搬 (うんぱん) | Vận chuyển | Đứng yên | Sản xuất | Tiêu hủy
+配送 (はいそう) | Phân phối/Giao hàng | Nhập hàng | Trả hàng | Giữ hàng
+直送 (ちょくそう) | Giao hàng trực tiếp | Giao gián tiếp | Giao chậm | Hủy giao hàng
+宅配 (たくはい) | Giao hàng tận nhà | Bán tại cửa hàng | Giao tại kho | Tự đến lấy
+送料 (そうりょう) | Cước phí vận chuyển | Tiền hàng | Tiền thuế | Tiền thưởng
+梱包 (こんぽう) | Đóng gói | Mở thùng | Cắt gọt | Sơn màu
+包装 (ほうそう) | Bao bì/Đóng gói | Tháo dỡ | Vứt bỏ | Giặt ủi
+緩衝材 (かんしょうざい) | Vật liệu đệm/Chống sốc | Vật liệu cứng | Keo dán | Dây buộc
+段ボール (だんぼーる) | Thùng carton | Giấy nháp | Sắt vụn | Gỗ tấm
+木枠 (きわく) | Khung gỗ | Thùng nhựa | Túi vải | Hộp sắt
+容器 (ようき) | Đồ chứa/Thùng chứa | Nội dung | Nắp đậy | Đáy thùng
+重量 (じゅうりょう) | Trọng lượng | Chiều dài | Thể tích | Diện tích
+容積 (ようせき) | Thể tích | Cân nặng | Chiều cao | Độ dày
+寸法 (すんぽう) | Kích thước | Màu sắc | Độ bền | Giá trị
+正味重量 (しょうみじゅうりょう) | Trọng lượng tịnh | Tổng trọng lượng | Trọng lượng bao bì | Sai số trọng lượng
+総重量 (そうじゅうりょう) | Tổng trọng lượng | Trọng lượng tịnh | Trọng lượng hàng lỗi | Trọng lượng mẫu
+計量器 (けいりょうき) | Cái cân | Thước dây | Nhiệt kế | Đồng hồ
+棚卸資産 (たなおろししさん) | Tài sản tồn kho | Tiền mặt | Nợ phải thu | Chi phí cố định
+入庫入力 (にゅうこにゅうりょく) | Nhập dữ liệu nhập kho | Xuất dữ liệu | Xóa dữ liệu | Sửa dữ liệu
+在庫切れ (ざいこぎれ) | Hết hàng | Còn hàng | Hàng lỗi | Hàng giả
+過剰在庫 (かじょうざいこ) | Tồn kho quá mức | Thiếu hàng | Hàng vừa đủ | Hàng sắp về
+死蔵品 (しぞうひん) | Hàng tồn kho lâu ngày | Hàng bán chạy | Hàng mới về | Hàng khuyến mãi
+整理整頓 (せいりせいとん) | Sàng lọc sắp xếp | Làm bẩn | Phá hoại | Bày bừa
+通関 (つうかん) | Thông quan | Xuất bến | Nhập bến | Cấm vận
+輸出 (ゆしゅつ) | Xuất khẩu | Nhập khẩu | Tiêu dùng | Sản xuất
+輸入 (ゆにゅう) | Nhập khẩu | Xuất khẩu | Đại lý | Cửa hàng
+関税 (かんぜい) | Thuế quan | Thuế thu nhập | Thuế giá trị gia tăng | Thuế thân
+原産地 (げんさんち) | Nơi xuất xứ | Nơi tiêu thụ | Nơi lưu kho | Nơi bán lẻ
+船積み (ふなづみ) | Gửi hàng bằng tàu | Gửi hàng máy bay | Gửi đường bộ | Gửi bưu điện
+航空便 (こうくうびん) | Đường hàng không | Đường biển | Đường sắt | Đường bộ
+船便 (ふなびん) | Đường biển | Đường hàng không | Chuyển phát nhanh | Đi bộ
+貨物 (かもつ) | Hàng hóa/Hàng ký gửi | Hành khách | Tiền bạc | Tài liệu
+コンテナ (こんてな) | Công-ten-nơ | Xe đạp | Thùng rác | Túi nilon
+荷札 (にふだ) | Thẻ ghi tên hàng | Hóa đơn | Hợp đồng | Tem bảo hành
+品番 (ひんばん) | Mã sản phẩm | Tên khách hàng | Địa chỉ | Số điện thoại
+型番 (かたばん) | Mã hiệu/Model | Giá tiền | Ngày tháng | Chữ ký
+ロット番号 (ろっとばんごう) | Số lô hàng | Số thứ tự | Số trang | Số tầng
+有効期限 (ゆうこうきげん) | Hạn sử dụng | Ngày sản xuất | Ngày ký | Ngày họp
+製造日 (せいぞうび) | Ngày sản xuất | Ngày hết hạn | Ngày nghỉ | Ngày lễ
+出荷案内 (しゅっかあんない) | Thông báo xuất hàng | Lệnh nhập hàng | Hóa đơn thuế | Thư cảm ơn
+配送業者 (はいそうぎょうしゃ) | Đơn vị vận chuyển | Nhà sản xuất | Khách hàng | Cơ quan thuế
+荷受人 (にうけにん) | Người nhận hàng | Người gửi hàng | Người vận chuyển | Người trung gian
+荷送人 (におくりにん) | Người gửi hàng | Người nhận hàng | Người mua | Người xem
+追跡番号 (ついせきばんごう) | Mã vận đơn/Số theo dõi | Số tài khoản | Số chứng minh | Số nhà
+紛失 (ふんしつ) | Thất lạc/Mất | Tìm thấy | Mua mới | Sửa chữa
+破損 (はそん) | Hư hỏng | Nguyên vẹn | Đẹp đẽ | Mới tinh
+損害賠償 (そんがいばいしょう) | Bồi thường thiệt hại | Thưởng tiền | Miễn thuế | Trả lương
+自動制御 (じどうせいぎょ) | Điều khiển tự động | Điều khiển bằng tay | Ngừng hoạt động | Bị hỏng
+手動 (しゅどう) | Thủ công/Bằng tay | Tự động | Máy móc | Lập trình
+回路図 (かいろず) | Sơ đồ mạch điện | Bản đồ | Ảnh chụp | Hướng dẫn sử dụng
+基板実装 (きばんじっそう) | Lắp ráp bảng mạch | Đúc nhựa | Hàn sắt | Sơn vỏ
+短絡 (たんらく) | Đoản mạch | Cách điện | Nguồn điện | Công tắc
+絶縁 (ぜつえん) | Cách điện | Dẫn điện | Truyền nhiệt | Ma sát
+漏電 (ろうでん) | Rò rỉ điện | Nạp điện | Tích điện | Phát điện
+停電 (ていでん) | Mất điện | Có điện | Quá tải | Cháy nổ
+過負荷 (かふか) | Quá tải | Nhẹ tải | Không tải | Vừa đủ
+電圧 (でんあつ) | Điện áp | Dòng điện | Điện trở | Tần số
+電流 (でんりゅう) | Dòng điện | Điện áp | Công suất | Nhiệt độ
+抵抗 (ていこう) | Điện trở | Dẫn điện | Công tắc | Bóng đèn
+容量 (ようりょう) | Dung lượng | Kích thước | Trọng lượng | Độ cao
+端子 (たんし) | Đầu nối/Cực | Dây dẫn | Nguồn | Vỏ
+接点 (せってん) | Điểm tiếp xúc | Khoảng cách | Đường thẳng | Hình tròn
+感電 (かんでん) | Điện giật | Bỏng nhiệt | Đứt tay | Ngã
+放電 (ほうでん) | Phóng điện | Sạc điện | Giữ điện | Ngắt điện
+充電 (じゅうでん) | Sạc điện | Hết pin | Hỏng máy | Tắt nguồn
+電池 (でんち) | Pin/Ắc quy | Động cơ | Dây điện | Bóng đèn
+発電機 (はつでんき) | Máy phát điện | Động cơ điện | Tủ lạnh | Máy bơm
+変圧器 (へんあつき) | Biến áp | Biến tần | Công tắc | Cầu chì
+整流 (せいりゅう) | Chỉnh lưu | Nghịch lưu | Khuếch đại | Giảm áp
+増幅 (ぞうふく) | Khuếch đại | Thu nhỏ | Cắt bỏ | Giữ nguyên
+信号 (しんごう) | Tín hiệu | Tiếng ồn | Hình ảnh | Ánh sáng
+変換 (へんかん) | Chuyển đổi | Giữ nguyên | Xóa bỏ | Sao chép
+同期 (どうき) | Đồng bộ | Lệch pha | Ngừng lại | Bắt đầu
+遅延 (ちえん) | Độ trễ | Nhanh chóng | Tức thì | Kết thúc
+誤差 (ごさ) | Sai số | Chính xác | Tuyệt đối | Kết quả
+精度 (せいど) | Độ chính xác | Sai lệch | Trọng lượng | Chiều dài
+感度 (かんど) | Độ nhạy | Độ bền | Độ cứng | Độ bóng
+分解能 (ぶんかいのう) | Độ phân giải | Độ dày | Độ rộng | Độ dài
+測定器 (そくていき) | Thiết bị đo lường | Thiết bị cắt | Thiết bị hàn | Thiết bị đóng gói
+校正 (こうせい) | Hiệu chuẩn | Sửa lỗi | Viết mới | Hủy bỏ
+摩耗 (まもう) | Hao mòn | Tăng thêm | Làm mới | Sạch sẽ
+腐食 (ふしょく) | Ăn mòn | Bảo vệ | Sơn phủ | Làm bóng
+劣化 (れっか) | Xuống cấp/Thoái hóa | Cải tiến | Làm mới | Tốt lên
+耐用年数 (たいようねんすう) | Tuổi thọ sử dụng | Ngày sản xuất | Ngày mua | Giá bán
+メンテナンス (めんてなんす) | Bảo trì | Phá hủy | Sử dụng | Bỏ qua
+故障診断 (こしょうしんだん) | Chẩn đoán hư hỏng | Sửa chữa | Mua máy mới | Vận hành
+予備品 (よびひん) | Phụ tùng dự phòng | Hàng chính | Phế liệu | Thành phẩm
+消耗品 (しょうもうひん) | Vật tư tiêu hao | Tài sản cố định | Hàng tặng | Hàng lỗi
+潤滑剤 (じゅんかつざい) | Chất bôi trơn | Chất tẩy rửa | Chất gây cháy | Nước
+防錆 (ぼうせい) | Chống rỉ sét | Làm rỉ | Sơn màu | Cắt gọt
+冷却水 (れいきゃくすい) | Nước làm mát | Nước nóng | Nước thải | Nước uống
+排水 (はいすい) | Thoát nước | Cấp nước | Lọc nước | Trữ nước
+換気扇 (かんきせん) | Quạt thông gió | Điều hòa | Lò sưởi | Máy hút bụi
+集塵機 (しゅうじんき) | Máy hút bụi công nghiệp | Máy nén khí | Máy khoan | Máy mài
+圧縮機 (あっしゅくき) | Máy nén | Máy giãn | Máy cắt | Máy hàn
+油圧 (ゆあつ) | Thủy lực (dầu) | Khí nén | Điện năng | Cơ năng
+空圧 (くうあつ) | Khí nén | Thủy lực | Trọng lực | Nhiệt lực
+工程 (こうてい) | Công đoạn | Kết quả | Lý do | Mục tiêu
+前工程 (まえこうてい) | Công đoạn trước | Công đoạn sau | Công đoạn cuối | Công đoạn lỗi
+後工程 (あとこうてい) | Công đoạn sau | Công đoạn trước | Công đoạn đầu | Công đoạn chính
+流動 (りゅうどう) | Lưu thông/Luân chuyển | Đứng yên | Tắc nghẽn | Biến mất
+歩留り向上 (ぶどまりこうじょう) | Cải thiện tỷ lệ thành phẩm | Tăng hàng lỗi | Giảm năng suất | Tăng chi phí
+タクトタイム (たくとたいむ) | Thời gian chu kỳ | Thời gian nghỉ | Thời gian họp | Thời gian đi làm
+リードタイム (りーどたいむ) | Thời gian từ đặt hàng đến giao | Thời gian ngủ | Thời gian ăn | Thời gian chơi
+生産計画 (せいさんけいかく) | Kế hoạch sản xuất | Kế hoạch nghỉ phép | Kế hoạch du lịch | Kế hoạch ăn uống
+生産実績 (せいさんじっせき) | Kết quả sản xuất thực tế | Dự định | Ước mơ | Kế hoạch
+稼働中 (かどうちゅう) | Đang hoạt động | Đang hỏng | Đang nghỉ | Đang sửa
+非稼働 (ひかどう) | Không hoạt động | Đang chạy | Đang tốt | Đang nhanh
+段取り替え (だんどりがえ) | Thay đổi thiết lập/Mẫu | Giữ nguyên mẫu | Vứt bỏ máy | Mua máy mới
+異常発生 (いじょうはっせい) | Phát sinh bất thường | Bình thường | May mắn | Thành công
+緊急停止 (きんきゅうていし) | Dừng khẩn cấp | Khởi động nhanh | Tăng tốc | Chạy chậm
+処置 (しょち) | Xử lý | Bỏ qua | Quan sát | Chờ đợi
+恒久対策 (こうきゅうたいさく) | Biện pháp lâu dài | Biện pháp tạm thời | Sai lầm | Vấn đề
+暫定対策 (ざんていたいさく) | Biện pháp tạm thời | Biện pháp vĩnh viễn | Thành công | Kết quả
+標準化 (ひょうじゅんか) | Tiêu chuẩn hóa | Cá nhân hóa | Làm xáo trộn | Thay đổi liên tục
+見える化 (みえるか) | Trực quan hóa | Che giấu | Làm mờ | Xóa bỏ
+効率化 (こうりつか) | Hiệu quả hóa | Lãng phí | Chậm trễ | Phức tạp
+自動化 (じどうか) | Tự động hóa | Thủ công | Bằng tay | Nhờ người
+省力化 (しょうりょくか) | Giảm sức lao động | Tăng sức | Thuê thêm người | Làm nặng
+治具 (じぐ) | Đồ gá | Máy tính | Bàn ghế | Xe cộ
+金型 (かながた) | Khuôn | Vít | Búa | Kìm
+工作機械 (こうさくきかい) | Máy công cụ | Máy tính | Xe máy | Điện thoại
+手作業 (てさぎょう) | Làm bằng tay | Làm bằng máy | Robot làm | Tự động
+目視検査 (もくしけんさ) | Kiểm tra bằng mắt | Kiểm tra bằng máy | Không kiểm tra | Nghe tiếng
+寸法測定 (すんぽうそくてい) | Đo kích thước | Cân trọng lượng | Kiểm tra màu | Thử độ bền
+合格証 (ごうかくしょう) | Giấy chứng nhận đạt | Giấy báo hỏng | Hóa đơn | Thẻ tên
+不合格票 (ふごうかくひょう) | Phiếu không đạt | Phiếu thưởng | Phiếu giảm giá | Phiếu quà tặng
+特採 (とくさい) | Phê duyệt đặc biệt (hàng lệch chuẩn) | Hủy bỏ hàng | Trả lại hàng | Mua hàng mới
+手直し (てなおし) | Sửa lại/Chỉnh sửa | Giữ nguyên | Vứt đi | Bán đi
+廃棄物 (はいきぶつ) | Chất thải | Tài sản | Sản phẩm | Nguyên liệu
+産業廃棄物 (さんぎょうはいきぶつ) | Rác thải công nghiệp | Rác sinh hoạt | Đồ ăn thừa | Nước uống
+リサイクル (りさいくる) | Tái chế | Vứt bỏ | Đốt cháy | Chôn lấp
+環境保護 (かんきょうほご) | Bảo vệ môi trường | Phá hoại | Ô nhiễm | Khai thác
+騒音防止 (そうおんぼうし) | Chống tiếng ồn | Gây ồn | Nghe nhạc | Hát hò
+防塵 (ぼうじん) | Chống bụi | Gây bụi | Làm bẩn | Quét dọn
+防潮 (ぼうちょう) | Chống ẩm | Làm ướt | Đun sôi | Làm đông
+防火 (ぼうか) | Phòng cháy | Gây cháy | Đốt lửa | Thổi gió
+消火栓 (しょうかせん) | Trụ cứu hỏa | Vòi sen | Bồn tắm | Chậu rửa
+避難訓練 (ひなんくんれん) | Diễn tập lánh nạn | Đi chơi | Ăn tiệc | Họp hành
+労働安全 (ろうどうあんぜん) | An toàn lao động | Tai nạn | Nguy hiểm | Rủi ro
+保護具 (ほごぐ) | Đồ bảo hộ | Đồ chơi | Trang sức | Quần áo ngủ
+安全旗 (あんぜんき) | Cờ an toàn | Cờ tổ quốc | Cờ hiệu | Cờ vây
+無災害 (むさいがい) | Không có tai nạn | Nhiều tai nạn | Có thương vong | Rất nguy hiểm
+点検記録 (てんけんきろく) | Nhật ký kiểm tra | Nhật ký ăn uống | Sổ tay cá nhân | Truyện tranh
+責任者 (せきにんしゃ) | Người chịu trách nhiệm | Nhân viên mới | Khách hàng | Người qua đường
+担当者 (たんとうしゃ) | Người phụ trách | Giám đốc | Bảo vệ | Tạp vụ
+管理者 (かんりしゃ) | Người quản lý | Người làm thuê | Người mua | Người bán
+ISO事務局 (いそじむきょく) | Văn phòng ISO | Xưởng sản xuất | Nhà kho | Căng tin
+品質マニュアル (ひんしつまにゅある) | Sổ tay chất lượng | Hợp đồng lao động | Bảng lương | Sách hướng dẫn máy
+内部監査 (ないぶかんさ) | Đánh giá nội bộ | Kiểm tra hàng | Phỏng vấn xin việc | Tiếp khách
+外部監査 (がいぶかんさ) | Đánh giá bên ngoài | Họp nội bộ | Đào tạo kỹ năng | Kiểm kê kho
+是正処置 (ぜぜいしょち) | Hành động khắc phục | Khen thưởng | Tăng lương | Thăng chức
+予防処置 (よぼうしょち) | Hành động phòng ngừa | Sửa chữa máy | Vứt bỏ hàng | Nhập nguyên liệu
+不適合 (ふてきごう) | Không phù hợp (NC) | Đạt tiêu chuẩn | Hoàn hảo | Xuất sắc
+観察事項 (かんさつじこう) | Điểm quan sát/Lưu ý | Lệnh bắt buộc | Quy định thuế | Luật lao động
+文書管理 (ぶんしょかんり) | Quản lý văn bản | Quản lý máy móc | Quản lý nhân sự | Quản lý tiền bạc
+最新版 (さいしんばん) | Bản mới nhất | Bản cũ | Bản nháp | Bản dịch
+有効性 (ゆうこうせい) | Tính hiệu lực | Sự vô lý | Sự chậm trễ | Sự hỏng hóc
+追跡可能性 (ついせきかのうせい) | Tính truy xuất nguồn gốc | Tính bảo mật | Tính công khai | Tính giải trí
+顧客満足 (こきゃくまんぞく) | Sự hài lòng của khách hàng | Lợi nhuận công ty | Sự thất vọng | Phàn nàn
+苦情処理 (くじょうしょり) | Xử lý khiếu nại | Quảng cáo | Bán hàng | Sản xuất
+納期遵守 (のうきじゅんしゅ) | Tuân thủ thời hạn giao hàng | Chậm trễ | Hủy đơn hàng | Thay đổi thiết kế
+継続的改善 (けいぞくてきかいぜん) | Cải tiến liên tục | Giữ nguyên | Làm tệ đi | Ngừng hoạt động
+環境方針 (かんきょうほうしん) | Chính sách môi trường | Chính sách lương | Kế hoạch sản xuất | Quy định an toàn
+目標管理 (もくひょうかんり) | Quản lý mục tiêu | Quản lý rác thải | Quản lý xe cộ | Quản lý thời tiết
+工程能力 (こうていのうりょく) | Năng lực công đoạn | Khả năng tài chính | Kỹ năng ngoại ngữ | Sức khỏe nhân viên
+ばらつき (ばらつき) | Sự sai lệch/biến động | Sự ổn định | Sự đồng nhất | Sự chính xác
+分布 (ぶんぷ) | Phân bố | Thu gom | Kết thúc | Bắt đầu
+平均値 (へいきんち) | Giá trị trung bình | Giá trị lớn nhất | Giá trị nhỏ nhất | Sai số
+中央値 (ちゅうおうち) | Giá trị trung vị | Tổng số | Hiệu số | Tích số
+最大公差 (さいだいこうさ) | Dung sai tối đa | Dung sai tối thiểu | Kích thước thực | Trọng lượng tịnh
+歩留まり率 (ぶどまりりつ) | Tỷ lệ thành phẩm | Tỷ lệ lỗi | Tỷ lệ nghỉ việc | Tỷ lệ thuế
+不良発生率 (ふりょうはっせいりつ) | Tỷ lệ phát sinh lỗi | Tỷ lệ đạt chất lượng | Tỷ lệ lợi nhuận | Tỷ lệ tăng trưởng
+原因究明 (げんいんきゅうめい) | Điều tra nguyên nhân | Đưa ra kết quả | Chờ đợi | Bỏ qua
+なぜなぜ分析 (なぜなぜぶんせき) | Phân tích 5 Why | Phân tích tài chính | Phân tích thị trường | Phân tích đối thủ
+再発防止策 (さいはつぼうしさく) | Kế hoạch chống tái diễn | Kế hoạch mở rộng | Kế hoạch nghỉ mát | Kế hoạch tuyển dụng
+水平展開 (すいへいてんかい) | Triển khai nhân rộng | Thu hẹp quy mô | Xóa bỏ quy trình | Giữ bí mật
+標準作業 (ひょうじゅんさぎょう) | Thao tác chuẩn | Thao tác tự do | Thao tác sai | Thao tác thử
+作業要領書 (さぎょうようりょうしょ) | Bảng hướng dẫn công việc | Hợp đồng mua bán | Đơn xin nghỉ phép | Báo cáo tài chính
+初物管理 (はつものかんり) | Quản lý sản phẩm đầu dòng | Quản lý hàng tồn | Quản lý hàng lỗi | Quản lý hàng trả
+変更管理 (へんこうかんり) | Quản lý sự thay đổi | Quản lý cố định | Quản lý tài sản | Quản lý kho
+識別 (しきべつ) | Nhận diện/Phân biệt | Trộn lẫn | Che giấu | Bỏ sót
+追跡 (ついせき) | Truy xuất/Theo dõi | Dừng lại | Bỏ qua | Xóa dấu vết
+台帳 (だいちょう) | Sổ quản lý | Truyện tranh | Tờ rơi | Thư mời
+記録保持 (きろくほじ) | Lưu trữ hồ sơ | Tiêu hủy hồ sơ | Sửa đổi hồ sơ | Làm mất hồ sơ
+機密保持 (きみつほじ) | Bảo mật thông tin | Công khai thông tin | Phát tán tin tức | Quảng cáo
+棚卸表 (たなおろしひょう) | Bảng kiểm kê kho | Bảng lương | Bảng chấm công | Bảng thực đơn
+検収印 (けんしゅういん) | Con dấu nghiệm thu | Con dấu hủy bỏ | Con dấu mật | Con dấu cá nhân
+承認印 (しょうにんいん) | Con dấu phê duyệt | Con dấu từ chối | Con dấu nháp | Con dấu giả
+領収 (りょうしゅう) | Thu nhận/Lĩnh nhận | Trả lại | Vứt bỏ | Cho mượn
+計上 (けいじょう) | Hạch toán/Ghi vào sổ | Xóa bỏ | Trì hoãn | Ước tính
+棚引 (たなびき) | Tồn đọng (hàng hóa) | Lưu thông | Bán chạy | Nhập mới
+出庫 (しゅっこ) | Xuất kho | Nhập kho | Kiểm kho | Chuyển kho
+入庫 (にゅうこ) | Nhập kho | Xuất kho | Thanh lý | Trả hàng
+在庫金額 (ざいこきんがく) | Giá trị hàng tồn kho | Giá bán lẻ | Chi phí vận chuyển | Tiền lãi
+減価償却 (げんかしょうきゃく) | Khấu hao tài sản | Tăng giá trị | Đầu tư mới | Thu lợi nhuận
+固定資産 (こていしさん) | Tài sản cố định | Tài sản lưu động | Tiền mặt | Nợ ngắn hạn
+労働契約 (ろうどうけいやく) | Hợp đồng lao động | Hợp đồng mua bán | Hợp đồng thuê nhà | Hợp đồng bảo hiểm
+就業規則 (しゅうぎょうきそく) | Nội quy làm việc | Luật giao thông | Quy định ăn uống | Sách hướng dẫn du lịch
+試用期間 (しようきかん) | Thời gian thử việc | Thời gian nghỉ hưu | Thời gian thăng tiến | Thời gian nghỉ lễ
+本採用 (ほんさいよう) | Tuyển dụng chính thức | Thử việc | Thực tập | Nghỉ việc
+解雇 (かいこ) | Sa thải | Tuyển dụng | Khen thưởng | Thăng chức
+退職金 (たいしょくきん) | Trợ cấp thôi việc | Tiền lương tháng | Tiền tăng ca | Tiền thưởng tết
+定年 (ていねん) | Tuổi nghỉ hưu | Tuổi đi học | Tuổi kết hôn | Tuổi trưởng thành
+福利厚生 (ふくりこうせい) | Phúc lợi xã hội | Tiền phạt | Thuế thu nhập | Chi phí sản xuất
+社会保険 (しゃかいほけん) | Bảo hiểm xã hội | Bảo hiểm xe máy | Bảo hiểm nhà cửa | Bảo hiểm du lịch
+雇用保険 (こようほけん) | Bảo hiểm thất nghiệp | Bảo hiểm nhân thọ | Bảo hiểm y tế | Bảo hiểm hỏa hoạn
+源泉徴収票 (げんせんちょうしゅうひょう) | Tờ khai thuế tại nguồn | Hóa đơn tiền điện | Phiếu giảm giá | Vé máy bay
+年末調整 (ねんまつちょうせい) | Quyết toán thuế cuối năm | Tổng kết sản xuất | Tiệc tất niên | Kiểm kê kho
+給与明細 (きゅうよめいさい) | Phiếu lương chi tiết | Thẻ nhân viên | Bảng chấm công | Giấy giới thiệu
+控除 (こうじょ) | Khấu trừ | Cộng thêm | Thưởng tiền | Tặng quà
+手当 (てあて) | Phụ cấp | Tiền phạt | Thuế | Nợ
+役職手当 (やくしょくてあて) | Phụ cấp chức vụ | Phụ cấp ăn trưa | Phụ cấp đi lại | Phụ cấp nhà ở
+資格手当 (しかくてあて) | Phụ cấp bằng cấp | Tiền thưởng chuyên cần | Tiền làm thêm | Tiền xăng
+通勤手当 (つうきんてあて) | Phụ cấp đi lại | Tiền điện thoại | Tiền trang phục | Tiền bảo hiểm
+家族手当 (かぞくてあて) | Phụ cấp gia đình | Phụ cấp độc thân | Phụ cấp thâm niên | Phụ cấp rủi ro
+有給取得率 (ゆうきゅうしゅとくりつ) | Tỷ lệ sử dụng nghỉ phép | Tỷ lệ đi làm muộn | Tỷ lệ nghỉ việc | Tỷ lệ tăng ca
+育児休業 (いくじきゅうぎょう) | Nghỉ thai sản/nuôi con | Nghỉ ốm | Nghỉ hè | Nghỉ phép năm
+介護休業 (かいごきゅうぎょう) | Nghỉ chăm sóc người thân | Nghỉ đi học | Nghỉ kết hôn | Nghỉ hưởng lương
+労働組合 (ろうどうくみあい) | Công đoàn lao động | Ban giám đốc | Phòng nhân sự | Hội khách hàng
+組合員 (くみあいいん) | Đoàn viên công đoàn | Cổ đông | Giám đốc | Đối tác
+労使協議 (ろうしきょうぎ) | Thỏa thuận giữa chủ và thợ | Tranh chấp | Họp khách hàng | Đào tạo
+産業医 (さんぎょうい) | Bác sĩ công ty | Kỹ sư trưởng | Giám đốc tài chính | Bảo vệ
+安全管理者 (あんぜんかんりしゃ) | Người quản lý an toàn | Người nấu ăn | Người lái xe | Người bán hàng
+衛生管理者 (えいせいかんりしゃ) | Người quản lý vệ sinh | Kế toán trưởng | Thủ kho | Lập trình viên
+適性検査 (てきせいけんさ) | Kiểm tra năng lực/tố chất | Khám sức khỏe | Kiểm tra máy | Kiểm tra hàng lỗi
+研修生 (けんしゅうせい) | Tu nghiệp sinh/Thực tập sinh | Giám đốc | Trưởng phòng | Khách hàng
+技能実習 (ぎのうじっしゅう) | Thực tập kỹ năng | Đi du lịch | Đi công tác | Đi mua sắm
+能力開発 (のうりょくかいはつ) | Phát triển năng lực | Giải trí | Nghỉ ngơi | Ăn uống
+昇給試験 (しょうきゅうしけん) | Kỳ thi tăng lương | Kỳ thi lái xe | Kỳ thi đại học | Kỳ thi nấu ăn
+自己啓発 (じこけいはつ) | Tự phát triển bản thân | Nhờ vả người khác | Ngừng học tập | Vui chơi
+人事異動 (じんじいどう) | Điều động nhân sự | Giữ nguyên chức vụ | Sa thải toàn bộ | Tuyển mới
+配置転換 (はいちてんかん) | Luân chuyển vị trí | Nghỉ việc | Thăng chức | Giảm lương
+出向 (しゅっこう) | Biệt phái | Nghỉ hưu | Đi học | Đi du lịch
+転勤 (てんきん) | Chuyển công tác (đổi địa điểm) | Nghỉ việc | Đi làm thêm | Về sớm
+派遣 (はけん) | Phái cử nhân viên | Thuê dài hạn | Biên chế | Thử việc
+嘱託 (しょくたく) | Nhân viên hợp đồng đặc biệt | Giám đốc | Nhân viên chính thức | Sinh viên
+辞令 (じれい) | Quyết định bổ nhiệm | Thư mời | Hóa đơn | Bảng lương
+役員 (やくいん) | Thành viên ban quản trị | Công nhân | Tạp vụ | Thực tập sinh
+常務 (じょうむ) | Giám đốc điều hành | Nhân viên văn phòng | Trưởng ca | Tổ trưởng
+専務 (せんむ) | Giám đốc quản lý | Trưởng phòng | Thư ký | Bảo vệ
+顧問 (こもん) | Cố vấn | Người mới | Người lao động | Đối thủ
+相談役 (そうだんやく) | Người tư vấn/Cố vấn | Kế toán | Bảo vệ | Công nhân
+派遣元 (はけんもと) | Công ty phái cử | Công ty tiếp nhận | Nhà máy | Cửa hàng
+派遣先 (はけんさき) | Công ty tiếp nhận nhân viên | Công ty môi giới | Trường học | Nhà riêng
+人材派遣 (じんざいはけん) | Cung ứng nhân lực | Cung ứng máy móc | Cung ứng vật liệu | Cung ứng thực phẩm
+ヘッドハンティング (へっどはんてぃんぐ) | Săn đầu người | Tuyển dụng đại trà | Sa thải | Nghỉ hưu
+稟議書 (りんぎしょ) | Đơn trình ký phê duyệt | Hợp đồng lao động | Hóa đơn | Danh thiếp
+印鑑証明 (いんかんしょうめい) | Giấy chứng nhận con dấu | Chứng minh thư | Hộ chiếu | Bằng lái xe
+登記 (とうき) | Đăng ký kinh doanh/Pháp lý | Mua bán | Hủy bỏ | Sửa chữa
+定款 (ていかん) | Điều lệ công ty | Nội quy lao động | Luật nhà nước | Sách giáo khoa
+委任状 (いにんじょう) | Giấy ủy quyền | Giấy mời | Giấy phạt | Giấy khen
+契約解除 (けいやくかいじょ) | Huỷ bỏ hợp đồng | Ký hợp đồng | Gia hạn hợp đồng | Sửa hợp đồng
+機密保持契約 (きみつほじけいやく) | Hợp đồng bảo mật (NDA) | Hợp đồng vận chuyển | Hợp đồng mua bán | Hợp đồng lao động
+秘密保持 (ひみつほじ) | Giữ bí mật | Công khai | Quảng cáo | Tuyên truyền
+情報漏洩 (じょうほうろうえい) | Rò rỉ thông tin | Bảo mật thông tin | Lưu trữ thông tin | Thu thập thông tin
+特許 (とっきょ) | Bằng sáng chế | Bản quyền | Nhãn hiệu | Thương hiệu
+商標 (しょうひょう) | Nhãn hiệu hàng hóa | Công thức | Sáng chế | Ý tưởng
+著作権 (ちょさくけん) | Bản quyền tác giả | Quyền sở hữu đất | Quyền bầu cử | Quyền tự do
+コンプライアンス (こんぷらいあんす) | Tuân thủ quy định | Vi phạm | Lách luật | Phớt lờ
+ガバナンス (がばんなす) | Quản trị doanh nghiệp | Sản xuất | Tiếp thị | Bán hàng
+コンサルタント (こんさるたんと) | Tư vấn viên | Công nhân | Khách hàng | Đối thủ
+見積書 (みつもりしょ) | Bản báo giá | Hóa đơn | Phiếu thu | Phiếu chi
+注文書 (ちゅうもんしょ) | Đơn đặt hàng | Biên bản | Báo cáo | Thư từ
+請求書 (せいきゅうしょ) | Yêu cầu thanh toán | Giấy cảm ơn | Thẻ giảm giá | Vé mời
+納品書 (のうひんしょ) | Phiếu giao hàng | Đơn đặt hàng | Bảng giá | Hợp đồng
+領収書 (りょうしゅうしょ) | Biên lai/Hóa đơn | Thẻ tên | Giấy mời | Sơ yếu lý lịch
+支払条件 (しはらいじょうけん) | Điều khoản thanh toán | Điều khoản vận chuyển | Điều khoản bảo hành | Điều khoản phạt
+振込 (ふりこみ) | Chuyển khoản | Trả tiền mặt | Nợ tiền | Quên trả
+口座番号 (こうざばんごう) | Số tài khoản | Số điện thoại | Số nhà | Số thẻ nhân viên
+資金繰り (しきんぐり) | Quản lý dòng tiền | Quản lý nhân sự | Quản lý máy móc | Quản lý thời gian
+予算編成 (よさんへんせい) | Lập ngân sách | Chi tiêu tự do | Tiết kiệm | Đầu tư chứng khoán
+決算 (けっさん) | Quyết toán/Tổng kết tài chính | Khởi nghiệp | Đầu tư | Vay vốn
+利益率 (りえきりつ) | Tỷ suất lợi nhuận | Tỷ lệ lỗ | Tỷ lệ thuế | Tỷ lệ tăng ca
+売上高 (うりあげだか) | Doanh thu | Chi phí | Lợi nhuận | Tiền lương
+経費削減 (けいひさくげん) | Cắt giảm kinh phí | Tăng chi tiêu | Đầu tư thêm | Hoang phí
+赤字 (あかじ) | Lỗ/Thâm hụt | Lãi | Hòa vốn | Giàu có
+黒字 (くろじ) | Lãi/Thặng dư | Lỗ | Phá sản | Nợ nần
+負債 (ふさい) | Khoản nợ | Tài sản | Lợi nhuận | Vốn điều lệ
+資本金 (しほんきん) | Vốn điều lệ | Tiền lãi | Tiền thuế | Tiền phạt
+投資 (とうし) | Đầu tư | Tiêu dùng | Tiết kiệm | Vứt bỏ
+株主 (かぶぬし) | Cổ đông | Nhân viên | Khách hàng | Đối thủ
+取締役 (とりしまりやく) | Thành viên hội đồng quản trị | Công nhân | Bảo vệ | Tạp vụ
+監査役 (かんさやく) | Kiểm soát viên | Giám đốc | Trưởng phòng | Nhân viên
+経理 (けいり) | Kế toán | Nhân sự | Sản xuất | Kinh doanh
+財務 (ざいむ) | Tài chính | Kỹ thuật | Marketing | Bảo trì
+税務署 (ぜいむしょ) | Cục thuế | Đồn cảnh sát | Bệnh viện | Trường học
+確定申告 (かくていしんこく) | Kê khai thuế | Kê khai nhân khẩu | Đăng ký kết hôn | Đăng ký hộ khẩu
+源泉徴収 (げんせんちょうしゅう) | Thuế khấu trừ tại nguồn | Tiền thưởng | Tiền hoa hồng | Tiền lương net
+消費税 (しょうひぜ) | Thuế tiêu thụ (VAT) | Thuế thu nhập | Thuế nhà đất | Thuế thân
+所得税 (しょとくぜ) | Thuế thu nhập | Thuế nhập khẩu | Thuế xuất khẩu | Thuế môi trường
+法人税 (ほうじんぜ) | Thuế doanh nghiệp | Thuế cá nhân | Thuế xe cộ | Thuế tài sản
+資産 (しさん) | Tài sản | Nợ | Chi phí | Lỗ
+負債 (ふさい) | Khoản nợ | Tiền mặt | Vàng | Nhà cửa
+借入金 (かりいれきん) | Tiền vay | Tiền cho vay | Tiền tiết kiệm | Tiền thưởng
+利息 (りそく) | Lãi suất | Tiền gốc | Tiền phạt | Tiền thuế
+返済 (へんさい) | Hoàn trả nợ | Vay thêm | Trốn nợ | Quên nợ
+スマート工場 (すまーとこうじょう) | Nhà máy thông minh | Nhà kho cũ | Văn phòng | Trường học
+産業用ロボット (さんぎょうようろぼっと) | Robot công nghiệp | Đồ chơi trẻ em | Máy tính | Điện thoại
+自動化ライン (じどうからいん) | Chuyền tự động | Chuyền thủ công | Nhà ăn | Bãi đỗ xe
+人工知能 (じんこうちのう) | Trí tuệ nhân tạo | Trí thông minh con người | Bản năng | Thói quen
+機械学習 (きかいがくしゅう) | Máy học | Người học | Sách giáo khoa | Trường học
+データ分析 (でーたぶんせき) | Phân tích dữ liệu | Thu thập dữ liệu | Xóa dữ liệu | Nhập dữ liệu
+予兆保全 (よちょうほぜん) | Bảo trì dự đoán | Bảo trì sau khi hỏng | Phá hủy máy | Mua máy mới
+遠隔監視 (えんかくかんし) | Giám sát từ xa | Giám sát tại chỗ | Bỏ mặc | Không quan tâm
+リアルタイム (りあるたいむ) | Thời gian thực | Quá khứ | Tương lai | Chậm trễ
+ネットワーク (ねっとわーく) | Mạng lưới | Đơn lẻ | Tách biệt | Một mình
+サーバー (さーばー) | Máy chủ | Máy khách | Bàn làm việc | Ghế ngồi
+クラウド (くらうど) | Điện toán đám mây | Máy tính cá nhân | Đĩa mềm | Giấy tờ
+セキュリティ (せきゅりてぃ) | Bảo mật | Công khai | Nguy hiểm | Rò rỉ
+ファイアウォール (ふぁいあうぉーる) | Tường lửa | Cửa ra vào | Cửa sổ | Mái nhà
+バックアップ (ばっくあっぷ) | Sao lưu | Xóa bỏ | Di chuyển | Cập nhật
+デジタルトランスフォーメーション (でじたるとらんすふぉーめーしょん) | Chuyển đổi số | Thủ công hóa | Giữ nguyên | Hủy bỏ
+ペーパーレス (ぺーぱーれす) | Không dùng giấy | Dùng nhiều giấy | In ấn | Viết tay
+システム導入 (しすてむどうにゅう) | Triển khai hệ thống | Hủy bỏ hệ thống | Sửa chữa hệ thống | Dừng hệ thống
+効率改善 (こうりつかいぜん) | Cải thiện hiệu suất | Làm giảm hiệu suất | Giữ nguyên | Bỏ qua
+工数削減 (こうすうさくげん) | Cắt giảm công đoạn/nhân lực | Tăng công đoạn | Giữ nguyên | Thêm người
+歩留まり向上 (ぶどまりこうじょう) | Tăng tỷ lệ thành phẩm | Tăng tỷ lệ lỗi | Giảm chất lượng | Tăng chi phí
+原価低減 (げんかていげん) | Giảm giá thành | Tăng giá thành | Giữ giá | Tăng chi phí
+品質向上 (ひんしつこうじょう) | Nâng cao chất lượng | Giảm chất lượng | Làm hỏng hàng | Bỏ qua lỗi
+顧客要求 (こきゃくようきゅう) | Yêu cầu khách hàng | Yêu cầu nhân viên | Yêu cầu sếp | Yêu cầu nhà nước
+試作 (しさく) | Sản xuất thử | Sản xuất đại trà | Hủy bỏ | Bán hàng
+量産 (りょうさん) | Sản xuất hàng loạt | Sản xuất thử | Ngừng sản xuất | Sản xuất thủ công
+量産移行 (りょうさんいこう) | Chuyển sang sản xuất hàng loạt | Ngừng sản xuất | Quay lại sản xuất thử | Bán máy
+垂直立ち上げ (すいちょくたちあげ) | Khởi động nhanh (sản xuất) | Khởi động chậm | Ngừng hoạt động | Thất bại
+不良流出 (ふりょうりゅうしゅつ) | Lọt hàng lỗi ra ngoài | Giữ hàng lỗi lại | Sửa hàng lỗi | Tiêu hủy hàng lỗi
+市場クレーム (しじょうくれーむ) | Khiếu nại từ thị trường | Lời khen | Sự hài lòng | Sự im lặng
+回収 (かいしゅう) | Thu hồi (Recall) | Bán ra | Tặng quà | Giữ lại
+廃棄 (はいき) | Tiêu hủy | Lưu trữ | Sử dụng | Làm mới
+再資源化 (さいしげんか) | Tái chế tài nguyên | Vứt bỏ | Chôn lấp | Đốt cháy
+省エネ (しょうえね) | Tiết kiệm năng lượng | Lãng phí | Dùng nhiều điện | Hỏng máy
+再生可能エネルギー (さいせいかのうえねるぎー) | Năng lượng tái tạo | Than đá | Dầu mỏ | Khí đốt
+環境負荷 (かんきょうふか) | Tác động môi trường | Bảo vệ môi trường | Làm sạch môi trường | Không ảnh hưởng
+脱炭素 (だつたんそ) | Khử cacbon | Thêm cacbon | Đốt than | Ô nhiễm
+サステナビリティ (さすてなびりてぃ) | Tính bền vững | Tính tạm thời | Sự phá hủy | Sự kết thúc
+トレーサビリティ (とれーさびりてぃ) | Khả năng truy xuất | Sự che giấu | Sự nhầm lẫn | Sự thất lạc
+サプライチェーン (さぷらいちぇーん) | Chuỗi cung ứng | Một cửa hàng | Khách hàng lẻ | Đối thủ
+部品調達 (ぶひんちょうたつ) | Cung ứng linh kiện | Bán linh kiện | Vứt linh kiện | Hỏng linh kiện
+在庫最適化 (ざいこさいてきか) | Tối ưu hóa tồn kho | Tăng tồn kho | Hết hàng | Hàng lỗi
+物流 (ぶつりゅう) | Logistics/Vận chuyển | Sản xuất | Thiết kế | Marketing
+拠点 (きょてん) | Căn cứ/Chi nhánh | Điểm dừng chân | Khách sạn | Nhà riêng
+物流センター (ぶつりゅうせんたー) | Trung tâm logistics | Nhà ăn | Phòng họp | Sân chơi
+リードタイム短縮 (りーどたいむたんしゅく) | Rút ngắn thời gian thực hiện | Kéo dài thời gian | Trì hoãn | Ngừng lại
+需要予測 (じゅようよそく) | Dự báo nhu cầu | Bỏ qua nhu cầu | Tạo ra nhu cầu | Hủy bỏ nhu cầu
+発注 (はっちゅう) | Đặt hàng | Nhận hàng | Giao hàng | Trả hàng
+受注 (じゅちゅう) | Nhận đơn hàng | Giao hàng | Hủy đơn | Mua hàng
+外注管理 (がいちゅうかんり) | Quản lý thuê ngoài | Tự làm | Không quản lý | Bỏ mặc
+シーケンス制御 (しーけんすせいぎょ) | Điều khiển tuần tự | Điều khiển ngẫu nhiên | Ngừng máy | Chỉnh sửa tay
+入力信号 (にゅうりょくしんごう) | Tín hiệu đầu vào | Tín hiệu đầu ra | Tiếng ồn | Mất điện
+出力信号 (しゅつりょくしんごう) | Tín hiệu đầu ra | Tín hiệu đầu vào | Nguồn điện | Cáp mạng
+接点 (せってん) | Tiếp điểm | Khoảng cách | Vỏ máy | Ốc vít
+常時開 (じょうじかい) | Thường mở (NO) | Thường đóng | Đang hỏng | Đang khóa
+常時閉 (じょうじへい) | Thường đóng (NC) | Thường mở | Đang chạy | Đang mở
+電磁弁 (でんじべん) | Van điện từ | Công tắc điện | Động cơ | Bơm nước
+光電センサ (こうでんせんさ) | Cảm biến quang | Cảm biến nhiệt | Cảm biến áp suất | Cảm biến rung
+近接センサ (きんせつせんさ) | Cảm biến tiệm cận | Cảm biến âm thanh | Cảm biến màu | Cảm biến ẩm
+リミットスイッチ (りみっとすいっち) | Công tắc hành trình | Công tắc nguồn | Cầu chì | Biến áp
+非常停止ボタン (ひじょうていしぼたん) | Nút dừng khẩn cấp | Nút khởi động | Nút reset | Nút tạm dừng
+制御盤 (せいぎょばん) | Tủ điều khiển | Bàn làm việc | Tủ quần áo | Giá sách
+端子台 (たんしだい) | Cầu đấu dây | Bảng mạch | Ổ cắm | Phích cắm
+配線ダクト (はいせんだくと) | Ống đi dây điện | Ống nước | Ống thông gió | Ống xả
+絶縁抵抗 (ぜつえんていこう) | Điện trở cách điện | Điện trở dòng điện | Công suất | Tần số
+短絡保護 (たんらくほご) | Bảo vệ ngắn mạch | Gây chập điện | Truyền điện | Ngắt nguồn
+過電流 (かでんりゅう) | Quá dòng | Đủ dòng | Thiếu dòng | Dòng xoay chiều
+接地 (せっち) | Tiếp địa/Nối đất | Cách điện | Truyền tin | Phát sóng
+インバータ (いんばーた) | Biến tần | Máy biến thế | Bộ lưu điện | Máy phát điện
+サーボモータ (さーぼもーた) | Động cơ servo | Động cơ bước | Động cơ xăng | Động cơ hơi nước
+ステッピングモータ (すてっぴんぐもーた) | Động cơ bước | Động cơ phản lực | Động cơ dầu | Động cơ servo
+減速機 (げんそくき) | Hộp giảm tốc | Bộ tăng tốc | Thắng tay | Bàn đạp
+軸芯 (じくしん) | Tâm trục | Vỏ trục | Bánh xe | Đai ốc
+偏芯 (へんしん) | Lệch tâm | Đồng tâm | Thẳng hàng | Cân bằng
+芯出し (しんだし) | Căn tâm | Làm lệch | Phá hủy | Uốn cong
+遊び (あそび) | Độ rơ/Độ hở | Chặt chẽ | Cố định | Hàn chết
+ガタつき (がたつき) | Bị rơ/Lỏng lẻo | Chắc chắn | Mới tinh | Sáng bóng
+潤滑不全 (じゅんかつふぜん) | Thiếu bôi trơn | Thừa dầu | Sạch sẽ | Hoạt động tốt
+異音 (いおん) | Tiếng động lạ | Âm thanh chuẩn | Yên lặng | Nhạc nền
+振動解析 (しんどうかいせき) | Phân tích rung động | Đo nhiệt độ | Kiểm tra màu | Cân trọng lượng
+熱膨張 (ねつぼうちょう) | Giãn nở nhiệt | Co lại | Đông cứng | Bay hơi
+歪み (ひずみ) | Biến dạng/Cong vênh | Thẳng | Phẳng | Tròn
+亀裂 (きれつ) | Vết nứt | Vết xước | Vết bẩn | Vết sơn
+バリ (ばり) | Bavia/Phần thừa | Nhẵn nhụi | Trơn bóng | Phẳng lỳ
+面取り (めんとり) | Vát cạnh | Đắp thêm | Khoan lỗ | Hàn nối
+ねじ切り (ねじきり) | Ta rô/Cắt ren | Đóng đinh | Dán keo | Sơn phủ
+穴あけ (あなあけ) | Khoan lỗ | Lấp lỗ | Mài bóng | Uốn cong
+研削 (けんさく) | Mài sắc/Mài phẳng | Đúc | Rèn | Hàn
+切削油 (せっさくゆ) | Dầu cắt gọt | Nước uống | Xăng | Cồn
+切粉 (きりこ) | Phoi/Mạt sắt | Linh kiện | Thành phẩm | Nguyên liệu
+洗浄 (せんじょう) | Tẩy rửa/Làm sạch | Làm bẩn | Làm hỏng | Sơn màu
+防錆処理 (ぼうせいしょり) | Xử lý chống rỉ | Làm rỉ | Nung nóng | Làm nguội
+メッキ (めっき) | Mạ kim loại | Sơn | Dán | Đục
+焼き入れ (やきいれ) | Tôi nhiệt | Làm lạnh | Cắt bỏ | Mài bóng
+溶融 (ようゆう) | Nóng chảy | Đông đặc | Bay hơi | Thăng hoa
+粘着 (ねんちゃく) | Dính/Kết dính | Bong tróc | Khô ráo | Trơn trượt
+剥離 (はくり) | Bong tróc/Bóc tách | Dán dính | Hàn chặt | Nối liền
+密封 (みっぷう) | Bịt kín/Niêm phong | Mở ra | Để hở | Rò rỉ
+気密性 (きみつせい) | Độ kín khí | Độ hở | Độ bền | Độ dẻo
+水密性 (すいみつせい) | Độ kín nước | Thấm nước | Rò rỉ | Bay hơi
+流体 (りゅうたい) | Chất lưu (lỏng/khí) | Chất rắn | Kim loại | Gỗ
+粘度 (ねんど) | Độ nhớt | Độ cứng | Độ bóng | Độ dài
+流量計 (りゅうりょうけい) | Đồng hồ đo lưu lượng | Nhiệt kế | Thước dây | Cân
+圧力計 (あつりょくけい) | Đồng hồ đo áp suất | Đồng hồ treo tường | La bàn | Máy ảnh
+油圧シリンダ (ゆあつしりんだ) | Xi lanh thủy lực | Xi lanh khí nén | Pittông động cơ | Van xả
+電磁弁 (でんじべん) | Van điện từ | Công tắc | Đèn báo | Chuông
+管継手 (かんつぎて) | Đầu nối ống | Dây điện | Bánh răng | Ốc vít
+配管 (はいかん) | Đi đường ống | Đi dây điện | Xây tường | Lát nền
+漏れ (もれ) | Rò rỉ | Kín | Đầy | Thiếu
+詰まり (つもり) | Tắc nghẽn | Thông suốt | Chảy mạnh | Bay hơi
+摩耗 (まもう) | Hao mòn | Tăng trưởng | Làm mới | Giữ nguyên
+消耗 (しょうもう) | Tiêu hao | Tích lũy | Dư thừa | Sản xuất
+予備品 (よびひん) | Phụ tùng dự phòng | Hàng chính | Phế liệu | Đồ cũ
+互換性 (ごかんせい) | Tính tương thích | Tính riêng biệt | Sự xung đột | Sự hỏng hóc
+標準仕様 (ひょうじゅんしよう) | Thông số tiêu chuẩn | Thông số đặc biệt | Sai số | Bản nháp
+特注 (とくちゅう) | Đặt làm đặc biệt | Hàng đại trà | Hàng cũ | Hàng tặng
+試作品 (しさくひん) | Sản phẩm dùng thử | Thành phẩm | Hàng bán | Hàng trả
+量産型 (りょうさんがた) | Kiểu sản xuất hàng loạt | Kiểu thủ công | Kiểu duy nhất | Kiểu hỏng
+型番 (かたばん) | Mã hiệu/Model | Giá cả | Ngày tháng | Tên sếp
+品番 (ひんばん) | Mã sản phẩm | Mã khách hàng | Mã nhân viên | Mã bưu điện
+ロット管理 (ろっとかんり) | Quản lý theo lô | Quản lý lẻ | Không quản lý | Bỏ mặc
+履歴 (りれき) | Lịch sử/Lưu vết | Tương lai | Dự đoán | Hiện tại
+変更通知 (へんこうつうち) | Thông báo thay đổi | Lệnh giữ nguyên | Thư mời | Báo cáo tài chính
+廃止 (はいし) | Bãi bỏ/Hủy bỏ | Duy trì | Bắt đầu | Phát triển
+暫定 (ざんてい) | Tạm thời | Vĩnh viễn | Mãi mãi | Cố định
+恒久 (こうきゅう) | Lâu dài/Vĩnh viễn | Tạm thời | Ngắn hạn | Một lát
+対策 (たいさく) | Đối sách | Vấn đề | Rắc rối | Câu hỏi
+処置 (しょち) | Xử lý | Bỏ qua | Quan sát | Chờ đợi
+復旧 (ふっきゅう) | Khôi phục/Sửa lại | Làm hỏng | Vứt bỏ | Mua mới
+稼働率 (かどうりつ) | Tỷ lệ hoạt động | Tỷ lệ nghỉ | Tỷ lệ lỗi | Tỷ lệ thuế
+負荷 (ふか) | Tải trọng/Áp lực | Nhẹ nhàng | Trống rỗng | Tự do
+余裕 (よゆう) | Phần dư/Dự phòng | Thiếu hụt | Vừa đủ | Khẩn cấp
+見積 (みつもり) | Báo giá/Ước tính | Thanh toán | Nhận tiền | Nợ
+発注 (はっちゅう) | Đặt hàng | Giao hàng | Trả hàng | Nhận hàng
+受注 (じゅちゅう) | Nhận đơn hàng | Mua hàng | Hủy đơn | Bán hàng
+外注 (がいちゅう) | Thuê ngoài | Tự làm | Lưu kho | Tiêu hủy
+検収 (けんしゅう) | Nghiệm thu | Sản xuất | Thiết kế | Marketing
+棚卸 (たなおろし) | Kiểm kê kho | Quét dọn | Sơn sửa | Đi làm
+在庫 (ざいこ) | Tồn kho | Hàng mới | Hàng hỏng | Hàng giả
+欠品 (けっぴん) | Thiếu hàng | Đầy kho | Hàng mới | Hàng mẫu
+出荷 (しゅっか) | Xuất hàng | Nhập hàng | Trả hàng | Lưu kho
+納品 (のうひん) | Giao hàng | Nhận hàng | Đặt hàng | Hủy hàng
+返品 (へんぴん) | Trả hàng | Mua hàng | Thuê hàng | Tặng hàng
+物流 (ぶつりゅう) | Logistics/Vận chuyển | Sản xuất | Kế toán | Nhân sự
+梱包 (こんぽう) | Đóng gói | Mở thùng | Cắt gọt | Hàn nối
+積載 (せきさい) | Chất hàng/Xếp hàng | Dỡ hàng | Vứt hàng | Ăn hàng
+輸送 (ゆそう) | Vận tải | Đứng yên | Sản xuất | Tiêu dùng
+貨物 (かもつ) | Hàng hóa | Hành khách | Tiền mặt | Giấy tờ
+通関 (つうかん) | Thông quan | Xuất bến | Nhập cảnh | Đi chơi
+報連相 (ほうれんそう) | Báo cáo - Liên lạc - Thảo luận | Ăn uống | Nghỉ ngơi | Đi chơi
+改善 (かいぜん) | Cải tiến | Giữ nguyên | Làm tệ | Phá hủy
+三現主義 (さんげんしゅぎ) | Nguyên tắc 3 thực (Hiện trường/vật/thực) | Lý thuyết | Đoán mò | Nghe kể
+根回し (ねまわし) | Thỏa thuận ngầm/Chuẩn bị trước | Cãi vã | Công khai | Phản đối
+朝礼 (ちょうれい) | Họp đầu giờ sáng | Tiệc tối | Nghỉ trưa | Đi về
+終礼 (しゅうれい) | Họp cuối giờ | Họp sáng | Nghỉ lễ | Đi làm
+社訓 (しゃくん) | Huấn thị công ty | Lời bài hát | Tin tức | Quảng cáo
+理念 (りねん) | Triết lý | Thói quen | Sở thích | Ý kiến
+方針 (ほうしん) | Phương châm | Kết quả | Sai lầm | Quá khứ
+ノルマ (のるま) | Chỉ tiêu/Định mức | Tự do | Nghỉ ngơi | Vui vẻ
+貢献 (こうけん) | Cống hiến | Phá hoại | Lười biếng | Trốn tránh
+責任感 (せきにんかん) | Tinh thần trách nhiệm | Sự cẩu thả | Sự vô tâm | Sự sợ hãi
+積極的 (せっきょくてき) | Tích cực | Tiêu cực | Lười biếng | Chậm chạp
+協調性 (きょうちょうせい) | Tính hợp tác | Tính cá nhân | Sự ích kỷ | Sự xung đột
+柔軟性 (じゅうなんせい) | Tính linh hoạt | Cứng nhắc | Bảo thủ | Khó khăn
+効率的 (こうりつてき) | Tính hiệu quả | Lãng phí | Vô ích | Chậm trễ
+論理的 (ろんりてき) | Tính logic | Cảm tính | Vô lý | Nhầm lẫn
+分析的 (ぶんせきてき) | Tính phân tích | Đoán mò | Ngẫu nhiên | Hời hợt
+客観的 (きゃっかんてき) | Tính khách quan | Chủ quan | Cá nhân | Phiến diện
+主観的 (しゅかんてき) | Tính chủ quan | Khách quan | Công bằng | Thẳng thắn
+生産性 (せいさんせい) | Năng suất | Thất thoát | Lãng phí | Đình trệ
+付加価値 (ふかかち) | Giá trị gia tăng | Giá trị giảm | Chi phí | Lỗ
+競争力 (きょうそうりょく) | Năng lực cạnh tranh | Sự yếu kém | Sự bảo hộ | Sự độc quyền
+差別化 (さべつか) | Tạo sự khác biệt | Giống nhau | Bắt chước | Hòa lẫn
+優位性 (ゆういせい) | Tính ưu việt/Lợi thế | Yếu thế | Thất bại | Bình thường
+課題 (かだい) | Thách thức/Vấn đề | Kết quả | Thành công | Phần thưởng
+解決策 (かいけつさく) | Giải pháp | Câu hỏi | Rắc rối | Nguyên nhân
+意思決定 (いしけってい) | Ra quyết định | Do dự | Chờ đợi | Bỏ qua
+実行力 (じっこうりょく) | Khả năng thực thi | Chỉ nói suông | Lười biếng | Từ bỏ
+継続力 (けいぞくりょく) | Khả năng duy trì | Ngắt quãng | Bỏ cuộc | Tạm thời
+忍耐 (にんたい) | Nhẫn nại | Nóng nảy | Bỏ cuộc | Tức giận
+挑戦 (ちょうせん) | Thử thách | An phận | Sợ hãi | Trốn tránh
+創造性 (そうぞうせい) | Tính sáng tạo | Sao chép | Cũ kỹ | Lạc hậu
+革新 (かくしん) | Cách tân/Đổi mới | Bảo thủ | Giữ nguyên | Lùi lại
+デジタル化 (でじたるか) | Số hóa | Thủ công | Viết tay | Giấy tờ
+ネットワーク (ねっとわーく) | Mạng lưới | Đơn lẻ | Tách biệt | Cô lập
+データベース (でーたべーす) | Cơ sở dữ liệu | Sổ tay | Giấy nháp | Thư từ
+情報共有 (じょうほうきょうゆう) | Chia sẻ thông tin | Giấu tin | Xóa tin | Nhầm lẫn
+情報漏洩 (じょうほうろうえい) | Rò rỉ thông tin | Bảo mật | Lưu trữ | Thu nhận
+サイバー攻撃 (さいばーこうげき) | Tấn công mạng | Bảo vệ | Hợp tác | Kết nối
+ウイルス感染 (ういるすかんせん) | Nhiễm virus | Diệt khuẩn | Khỏe mạnh | An toàn
+パスワード (ぱすわーど) | Mật khẩu | Tên đăng nhập | Email | Địa chỉ
+ログイン (ろぐいん) | Đăng nhập | Đăng xuất | Xóa tài khoản | Đăng ký
+バックアップ (ばっくあっぷ) | Sao lưu | Xóa bỏ | Di chuyển | Cập nhật
+クラウド (くらうど) | Điện toán đám mây | Máy tính bàn | Đĩa mềm | Giấy
+ＡＩ (えーあい) | Trí tuệ nhân tạo | Con người | Động vật | Cây cối
+ＩｏＴ (あいおーてぃー) | Internet vạn vật | Ngoại tuyến | Thủ công | Cô lập
+自動運転 (じどううんてん) | Lái xe tự động | Lái bằng tay | Đi bộ | Đi xe đạp
+仮想現実 (かそうげんじつ) | Thực tế ảo | Đời thực | Quá khứ | Giấc mơ
+暗号化 (あんごうか) | Mã hóa | Giải mã | Công khai | Tuyên truyền
+リスク管理 (りすくかんり) | Quản lý rủi ro | Quản lý lợi nhuận | Quản lý nhân sự | Quản lý thời gian
+危機管理 (ききかんり) | Quản lý khủng hoảng | Vui chơi | Giải trí | Nghỉ ngơi
+想定外 (そうていがい) | Ngoài dự tính | Trong dự tính | Kế hoạch | Bình thường
+緊急事態 (きんきゅうじたい) | Tình trạng khẩn cấp | Bình thường | Yên bình | An toàn
+避難指示 (ひなんしじ) | Chỉ thị sơ tán | Lệnh tập hợp | Lệnh làm việc | Lệnh đi ngủ
+火災報知器 (かさいほうちき) | Chuông báo cháy | Chuông cửa | Điện thoại | Đồng hồ
+消火活動 (しょうかかつどう) | Hoạt động chữa cháy | Gây cháy | Đốt lửa | Thổi gió
+応急手当 (おうきゅうてあて) | Sơ cứu | Phẫu thuật | Khám bệnh | Nhập viện
+負傷者 (ふしょうしゃ) | Người bị thương | Người khỏe | Người giàu | Người nổi tiếng
+無事 (ぶじ) | Bình an/Vô sự | Nguy hiểm | Tai nạn | Chết chóc
+損害 (そんがい) | Thiệt hại | Lợi ích | Thành công | May mắn
+賠償 (ばいしょう) | Bồi thường | Nhận tiền | Thưởng tiền | Tặng quà
+保険加入 (ほけんかにゅう) | Tham gia bảo hiểm | Hủy bảo hiểm | Bán bảo hiểm | Không có bảo hiểm
+免責 (めんせき) | Miễn trách nhiệm | Chịu trách nhiệm | Bị phạt | Bị bắt
+守秘義務 (しゅひぎむ) | Nghĩa vụ bảo mật | Quyền công khai | Quảng cáo | Tuyên truyền
+倫理規定 (りんりきてい) | Quy định đạo đức | Quy định ăn uống | Luật giao thông | Nội quy kho
+不正行為 (ふせいこうい) | Hành vi bất chính | Hành vi tốt | Khen thưởng | Giúp đỡ
+違反 (いはん) | Vi phạm | Tuân thủ | Thực hiện | Nghe theo
+罰則 (ばっそく) | Quy tắc xử phạt | Quy tắc khen thưởng | Tặng quà | Khuyến khích
+解雇 (かいこ) | Sa thải | Tuyển dụng | Thăng chức | Tăng lương
+警告 (けいこく) | Cảnh cáo | Khen ngợi | Khuyến khích | Mời gọi
+注意勧告 (ちゅういかんこく) | Khuyên cáo/Nhắc nhở | Bỏ qua | Cho phép | Khen thưởng
+始末書 (しまつしょ) | Bản kiểm điểm | Bằng khen | Hợp đồng | Hóa đơn
+反省 (はんせい) | Kiểm điểm/Xem lại mình | Kiêu ngạo | Tự tin | Vui vẻ
+信頼回復 (しんらいかいふく) | Khôi phục tin cậy | Làm mất lòng tin | Nghi ngờ | Ghét bỏ
+誠実 (せいじつ) | Thành thật | Gian dối | Lười biếng | Độc ác
+迅速 (じんそく) | Nhanh chóng | Chậm chạp | Trì trệ | Lười biếng
+丁寧 (ていねい) | Lịch sự/Cẩn thận | Thô lỗ | Cẩu thả | Nóng nảy
+正確 (せいかく) | Chính xác | Sai lệch | Mơ hồ | Nhầm lẫn
+適切 (てきせつ) | Thích hợp | Sai lệch | Không phù hợp | Vô lý
+向上心 (こうじょうしん) | Tinh thần cầu tiến | Lười biếng | Bỏ cuộc | Tự mãn
+団結 (だんけつ) | Đoàn kết | Chia rẽ | Cá nhân | Xung đột
+組織 (そしき) | Tổ chức | Cá nhân | Riêng lẻ | Một mình
+一体感 (いったいかん) | Cảm giác đồng lòng | Chia rẽ | Cô đơn | Xa cách
+達成感 (たっせいかん) | Cảm giác thành tựu | Thất bại | Buồn chán | Mệt mỏi
+やりがい (やりがい) | Đáng làm/Giá trị công việc | Vô nghĩa | Mệt mỏi | Chán nản
+自己実現 (じこじつげん) | Khẳng định bản thân | Che giấu mình | Từ bỏ mình | Quên mình
+社会貢献 (しゃかいこうけん) | Cống hiến xã hội | Phá hoại | Ích kỷ | Một mình
+持続可能 (じぞくかのう) | Bền vững | Tạm thời | Ngắn hạn | Kết thúc
+成長 (せいちょう) | Trưởng thành/Phát triển | Lùi lại | Giữ nguyên | Héo úa
+発展 (はってん) | Phát triển | Suy thoái | Đứng yên | Kết thúc
+繁栄 (はんえい) | Phồn vinh | Nghèo đói | Suy sụp | Biến mất
+共存 (きょうぞん) | Cùng tồn tại | Tiêu diệt | Một mình | Đối đầu
+感謝 (かんしゃ) | Cảm ơn | Oán trách | Ghét bỏ | Quên ơn
+拝啓 (はいけい) | Kính gửi (đầu thư) | Tạm biệt | Xin lỗi | Cảm ơn
+敬具 (けいぐ) | Kính thư (cuối thư) | Xin chào | Chào buổi sáng | Chào buổi tối
+お疲れ様 (おつかれさま) | Bạn đã vất vả rồi | Chào buổi sáng | Chúc ngủ ngon | Xin lỗi
+失礼します (しつれいします) | Tôi xin phép/Thất lễ | Xin chào | Cảm ơn | Không có gì
+よろしくお願いします (よろしくおねがいします) | Mong được giúp đỡ | Tạm biệt | Xin lỗi | Đừng làm phiền
+ありがとうございます (ありがとうございます) | Xin cảm ơn | Xin lỗi | Tạm biệt | Hẹn gặp lại
+    `;
+
+    const dataNguPhap = `
+～から (kara) | Sau khi... | Nhưng... | Nếu... | Vì...
+～まで (made) | Từ... | Và... | Hoặc... | Đến...
+～ている (te iru) | Đã làm... | Sẽ làm... | Không làm... | Đang làm...
+～てもいい (te mo ii) | Phải làm... | Không được... | Muốn làm... | Được phép...
+～てはいけない (te wa ikenai) | Có thể làm... | Nên làm... | Đang làm... | Không được phép...
+～てください (te kudasai) | Đừng làm... | Đang làm... | Muốn làm... | Hãy làm...
+～ないdeください (naide kudasai) | Hãy làm... | Sẽ làm... | Có thể làm... | Xin đừng...
+～ Ngữ pháp N5 tiếp theo sẽ được bổ sung dưới đây ～
+～ことができる (koto ga dekiru) | Phải làm... | Thích làm... | Đang làm... | Có thể làm...
+～たい (tai) | Ghét làm... | Sợ làm... | Đã làm... | Muốn làm...
+～ながら (nagara) | Sau khi... | Trước khi... | Bởi vì... | Vừa... vừa...
+～たことがある (ta koto ga aru) | Chưa từng... | Sẽ làm... | Đang làm... | Đã từng...
+～ほうがいい (hou ga ii) | Không nên... | Phải làm... | Muốn làm... | Nên làm...
+～つもり (tsumori) | Đã làm... | Đang làm... | Không bao giờ... | Dự định...
+～まえに (mae ni) | Sau khi... | Trong khi... | Bởi vì... | Trước khi...
+～あとde (ato de) | Trước khi... | Khi nào... | Nếu... | Sau khi...
+～すぎる (sugiru) | Một chút... | Vừa đủ... | Không đủ... | Quá...
+～でしょう (deshou) | Chắc chắn... | Không bao giờ... | Đang là... | Có lẽ...
+～などの (nado no) | Chỉ có... | Không có... | Tất cả... | Như là...
+～とき (toki) | Vì... | Nếu... | Nhưng... | Khi...
+～より (yori) | Giống như... | Khác với... | Bởi vì... | So với...
+～ね (ne) | Quá... | Đúng không? | Mà... | Nhỉ/Nhé (xác nhận)
+～よ (yo) | Nhỉ... | Đâu... | Sao... | Đấy/Nhé (nhấn mạnh thông tin mới)
+～ vị ngữ + độ (động từ thể từ điển + と) | Vì... | Sau khi... | Tuy nhiên... | Hễ mà/Nếu...
+～ましょう (mashou) | Đang làm... | Đã làm... | Muốn làm... | Cùng làm... nhé
+～ましょうか (mashou ka) | Làm gì đó... | Tại sao không... | Phải không... | Tôi làm giúp nhé...
+～（さ）せる (saseru) | Bị làm... | Được làm... | Phải làm... | Cho phép/Bắt làm...
+～（ら）れる (rareru) | Muốn làm... | Định làm... | Bắt làm... | Bị/Được làm...
+～（さ）せられる (saserareru) | Được làm... | Cho phép làm... | Đang làm... | Bị bắt làm...
+～ようだ (you da) | Vì... | Chắc chắn là... | Nên là... | Hình như là...
+～みたいだ (mitai da) | Đang... | Sẽ... | Chẳng qua là... | Giống như là...
+～らしい (rashii) | Nghe nói... | Phải là... | Chắc chắn... | Đúng nghĩa là/Nghe nói là...
+～かもしれない (ka mo shirenai) | Chắc chắn... | Không thể... | Nên là... | Có lẽ/Có thể...
+～はずだ (hazu da) | Có lẽ... | Đã từng... | Sẽ làm... | Chắc chắn là...
+～はずがない (hazu ga nai) | Chắc chắn là... | Có lẽ không... | Nên là... | Lẽ nào lại/Chắc chắn không...
+～ために (tame ni) | Mặc dù... | Trong khi... | Vì vậy... | Để/Vì...
+～ように (you ni) | Vì... | Sau khi... | Để mà không... | Để/Để sao cho...
+～ようになる (you ni naru) | Đang làm... | Muốn làm... | Định làm... | Trở nên có thể làm...
+～ようにする (you ni suru) | Phải làm... | Đã làm... | Đang làm... | Cố gắng làm...
+～たら (tara) | Vì... | Mặc dù... | Sau khi... | Nếu/Sau khi...
+～ば (ba) | Nhưng... | Vì... | Tuy nhiên... | Nếu...
+～なら (nara) | Sau khi... | Bởi vì... | Mặc dù... | Nếu là/Trong trường hợp...
+～ても (te mo) | Vì... | Nếu... | Sau khi... | Cho dù...
+～し (shi) | Nhưng... | Tuy nhiên... | Vì vậy... | Và/Vì (liệt kê lý do)...
+～すぎる (sugiru) | Một chút... | Vừa đủ... | Không đủ... | Quá...
+～やすい (yasui) | Khó làm... | Đang làm... | Sẽ làm... | Dễ làm...
+～にくい (nikui) | Dễ làm... | Muốn làm... | Thường làm... | Khó làm...
+～ところだ (tokoro da) | Trước khi... | Đã xong... | Sắp làm... | Đang lúc/Sắp sửa...
+～ばかり (bakari) | Chỉ có... | Một chút... | Sẽ làm... | Vừa mới/Chỉ toàn...
+～はず (hazu) | Đã làm... | Đang làm... | Muốn làm... | Đáng lẽ/Chắc chắn...
+～ことにする (koto ni suru) | Được quyết định... | Đang làm... | Phải làm... | Quyết định làm...
+～ことになる (koto ni naru) | Quyết định làm... | Đã làm... | Muốn làm... | Được quyết định là...
+～という (to iu) | Là vì... | Tuy nhiên... | Chính là... | Gọi là/Nói là...
+～といっても (to ittemo) | Vì... | Nếu... | Cho dù... | Dù nói là... nhưng...
+～というより (to iu yori) | Vì... | Nhưng... | Giống như... | Thay vì nói là... thì đúng hơn
+～といわれている (to iwarete iru) | Đang nói... | Muốn nói... | Đã nói... | Được nói là...
+～と聞いている (to kiite iru) | Đang nghe... | Sẽ nghe... | Muốn nghe... | Nghe nói là...
+～てくる (te kuru) | Đi rồi về... | Làm xong... | Làm tiếp... | Cứ... (hành động hướng về hiện tại)
+～ていく (te iku) | Đến... | Về... | Đã làm... | Cứ... (hành động hướng ra xa/tương lai)
+～てほしい (te hoshii) | Đang làm... | Muốn làm... | Sẽ làm... | Muốn (ai đó) làm...
+～てみる (te miru) | Đang làm... | Đã làm... | Sẽ làm... | Thử làm...
+～てしまう (te shimau) | Sẽ làm... | Đang làm... | Muốn làm... | Lỡ làm/Làm xong hết...
+～ておいて (te oite) | Đang làm... | Muốn làm... | Sẽ làm... | Hãy làm sẵn...
+～ておく (te oku) | Đang làm... | Đã làm... | Muốn làm... | Làm sẵn/Làm chuẩn bị...
+～あげる / もらう / くれる (ageru/morau/kureru) | Cho/Nhận/Tặng | Mua/Bán | Đi/Đến | Cho/Nhận/Tặng (hành động)
+～（さ）せていただく (sasete itadaku) | Bị làm... | Phải làm... | Muốn làm... | Cho phép tôi làm... (kính ngữ)
+～うちに (uchi ni) | Sau khi... | Trong khi... | Vì... | Trong lúc còn đang...
+～間 / 間に (aida / aida ni) | Trước khi... | Sau khi... | Bởi vì... | Trong khi/Trong suốt...
+～たびに (tabi ni) | Thỉnh thoảng... | Sau khi... | Chỉ khi... | Cứ mỗi lần...
+～最中に (saichuu ni) | Trước khi... | Sau khi... | Cuối cùng... | Ngay đúng lúc đang...
+～から～にかけて (kara... ni kakete) | Từ... đến (rõ ràng)... | Chỉ tại... | Vì... đến... | Từ... đến (khoảng)...
+～のことだから (no koto dakara) | Vì là... | Tuy là... | Mặc dù... | Chính vì... (bản chất của ai đó)
+～おかげで (okage de) | Tại vì... | Mặc dù... | Nếu không có... | Nhờ có...
+～せいで (sei de) | Nhờ có... | Tuy là... | Vì... | Tại vì/Do (kết quả xấu)...
+～につき (ni tsuki) | Để... | Mặc dù... | Tuy nhiên... | Vì/Mỗi... (trong thông báo)
+～どおりに (doori ni) | Khác với... | Mặc dù... | Vì... | Đúng như/Theo như...
+～に加えて (ni kuwaete) | Thay vì... | Trái với... | Vì... | Thêm vào đó/Không chỉ...
+～に代わって (ni kawatte) | Cùng với... | Để... | Vì... | Thay cho/Đại diện cho...
+～に比べて (ni kurabete) | Giống như... | Khác với... | Vì... | So với...
+～に対して (ni taishite) | Để... | Nhờ có... | Vì... | Đối với/Trái ngược với...
+～反面 (hanmen) | Đồng thời... | Hơn nữa... | Bởi vì... | Mặt khác/Trái lại...
+～ついでに (tsuide ni) | Trước khi... | Sau khi... | Vì... | Nhân tiện...
+～とともに (to tomo ni) | Sau khi... | Vì... | Chỉ có... | Cùng với/Đồng thời với...
+～にともなって (ni tomonatte) | Trước khi... | Vì... | Tuy nhiên... | Cùng với/Kéo theo...
+～につれて (ni tsurete) | Mặc dù... | Sau khi... | Vì... | Càng... càng... (biến đổi tự nhiên)
+～にしたがって (ni shitagatte) | Tuy nhiên... | Vì... | Trước khi... | Càng... càng/Theo như...
+～切る (kiru) | Đang làm... | Sắp làm... | Thử làm... | Làm hết/Làm xong hoàn toàn...
+～抜く (nuku) | Bắt đầu làm... | Đang làm... | Không làm... | Làm đến cùng...
+～かける (kakeru) | Làm xong... | Đã làm... | Thử làm... | Đang làm dở...
+～がちだ (gachi da) | Hiếm khi... | Muốn làm... | Đang làm... | Thường/Hay (xu hướng xấu)...
+～っぱなし (ppanashi) | Làm xong... | Chuẩn bị làm... | Định làm... | Để nguyên trạng thái... (xấu)
+～だらけ (darake) | Chỉ có... | Không có... | Đầy... (tốt) | Đầy/Toàn là... (xấu)
+～らしい (rashii) | Chắc chắn... | Hình như... | Có lẽ... | Đúng nghĩa là...
+～っぽい (ppoi) | Giống như... | Rất là... | Thật sự là... | Cảm thấy như là/Hay...
+～ほど (hodo) | Vì... | Tuy là... | Chỉ có... | Đến mức/Càng...
+～くらい / ぐらい (kurai) | Vì... | Hơn là... | Nhất là... | Đến mức/Khoảng...
+～に決まっている (ni kimatte iru) | Có lẽ là... | Không hẳn là... | Chưa biết... | Chắc chắn là...
+～はずがない (hazu ga nai) | Chắc là... | Có thể là... | Nên là... | Chắc chắn không...
+～わけがない (wake ga nai) | Đáng lẽ... | Có lẽ... | Chắc chắn là... | Tuyệt đối không thể...
+～わけではない (wake de wa nai) | Chắc chắn... | Tuyệt đối không... | Nên là... | Không hẳn là/Không có nghĩa là...
+～わけだ (wake da) | Vì thế... | Đáng lẽ... | Chắc chắn không... | Thảo nào/Tóm lại là...
+～っけ (kke) | Nhỉ... | Đâu... | Sao... | Có phải... không nhỉ? (xác nhận)
+～しかない (shika nai) | Không nên... | Phải làm... | Muốn làm... | Chỉ còn cách là...
+～どころではない (dokoro de wa nai) | Không chỉ... | Phải làm... | Nên làm... | Không phải lúc/Không thể...
+～から～にかけて (kara... ni kakete) | Vì... | Mặc dù... | Sau khi... | Từ khoảng... đến khoảng...
+～わけにはいかない (wake ni wa ikanai) | Phải làm... | Không muốn làm... | Có thể làm... | Không thể làm (vì đạo đức/lý do)...
+～ないわけにはいかない (nai wake ni wa ikanai) | Không được làm... | Nên làm... | Không thể làm... | Đành phải/Buộc phải làm...
+～にかかわらず (ni kakawarazu) | Vì... | Tuy nhiên... | Nếu... | Bất kể/Không quan tâm...
+～のみならず (nomi narazu) | Chỉ có... | Thay vì... | Bởi vì... | Không chỉ... mà còn...
+～ばかりか (bakari ka) | Chỉ có... | Vừa mới... | Bởi vì... | Không chỉ... mà còn...
+～にわたって (ni watatte) | Chỉ có... | Vì... | Trong khi... | Suốt/Khắp (phạm vi)...
+～を通じて / を通して (wo tsuujite) | Vì... | Để... | Sau khi... | Thông qua/Trong suốt...
+～さえ (sae) | Chỉ... | Cũng... | Vì... | Ngay cả/Thậm chí...
+～といった (to itta) | Vì... | Tuy nhiên... | Chính là... | Như là/Những thứ như...
+～得る (eru / uru) | Phải làm... | Không thể... | Nên làm... | Có thể/Có khả năng...
+～かねない (kanenai) | Không thể... | Chắc chắn là... | Nên làm... | Có thể sẽ (kết quả xấu)...
+～かねる (kaneru) | Có thể... | Chắc chắn... | Dễ dàng... | Khó lòng mà/Không thể...
+～際 / 際に (sai / sai ni) | Trước khi... | Sau khi... | Trong khi... | Khi/Lúc... (văn viết trang trọng)
+～に際して / にあたって (ni saishite) | Sau khi... | Vì... | Trong khi... | Nhân dịp/Khi bắt đầu làm...
+～たとたん (ta totan) | Trước khi... | Trong khi... | Sau khi... | Ngay sau khi... (bất ngờ)
+～（か）と思うと (ka to omou to) | Định làm... | Đang làm... | Sẽ làm... | Vừa mới... thì ngay lập tức
+～か～ないかのうちに (ka... nai ka no uchi ni) | Sau khi... | Trong khi... | Trước khi... | Vừa mới... thì đã...
+～最中だ (saichuu da) | Trước khi... | Sau khi... | Cuối cùng... | Ngay đúng lúc đang...
+～ばかりだ / 一方だ (bakari da / ippou da) | Đã xong... | Không đổi... | Đang làm... | Cứ dần dần theo hướng...
+～（つ）つある (tsutsu aru) | Đã xong... | Định làm... | Sẽ làm... | Dần dần đang...
+～つつ (tsutsu) | Vì... | Sau khi... | Mặc dù... | Vừa... vừa / Mặc dù...
+～抜く (nuku) | Bắt đầu làm... | Đang làm... | Thử làm... | Làm đến cùng/Xong hoàn toàn...
+～切る (kiru) | Sắp làm... | Đang làm... | Định làm... | Làm hết/Cực kỳ...
+～きる (ki ru) | Đang làm... | Sẽ làm... | Không thể... | Có thể làm xong/Hết...
+～たて (tate) | Đã lâu... | Sắp làm... | Đang làm... | Vừa mới xong (tươi mới)...
+～ればこそ (reba koso) | Mặc dù... | Vì vậy... | Tuy nhiên... | Chính vì... mới...
+～ばかりに (bakari ni) | Nhờ có... | Tuy nhiên... | Chỉ vì... | Chỉ vì... mà (kết quả xấu)
+～以上は (ijou wa) | Vì... | Tuy nhiên... | Nếu... | Một khi đã... thì phải...
+～からには (kara ni wa) | Tuy là... | Trước khi... | Mặc dù... | Một khi đã... thì...
+～からといって (kara to itte) | Vì... | Tuy nhiên... | Nếu... | Cho dù nói là... thì cũng không hẳn
+～だけに (dake ni) | Mặc dù... | Tuy nhiên... | Chỉ vì... | Chính vì... nên càng...
+～だけのことはある (dake no koto wa aru) | Vì... | Tuy nhiên... | Mặc dù... | Chả trách/Xứng đáng với...
+～のことだから (no koto dakara) | Tuy nhiên... | Mặc dù... | Nếu... | Chính vì (bản chất)... nên chắc chắn
+～につき (ni tsuki) | Để... | Mặc dù... | Nhưng... | Vì (lý do trang trọng/thông báo)
+～のもっともだ (no mottomo da) | Vì... | Tuy nhiên... | Sai rồi... | ...là chuyện đương nhiên
+～ものだから / もので (mono dakara) | Mặc dù... | Tuy nhiên... | Để... | Vì... (biện bạch/phân trần)
+～ものなら (mono nara) | Nếu... | Vì... | Tuy nhiên... | Nếu có thể... (điều khó thực hiện)
+～もん (mon) | Tuy là... | Vì... | Nhưng... | Vì... (văn nói thân mật/nũng nịu)
+～わけだ (wake da) | Đáng lẽ... | Chắc chắn không... | Vì thế... | Thảo nào/Tóm lại là...
+～わけがない (wake ga nai) | Đáng lẽ... | Có lẽ... | Chắc là... | Tuyệt đối không thể có chuyện...
+～わけではない (wake de wa nai) | Tuyệt đối không... | Chắc chắn... | Nên là... | Không hẳn là/Không có nghĩa là...
+～わけにはいかない (wake ni wa ikanai) | Phải làm... | Muốn làm... | Có thể làm... | Không thể làm (vì lương tâm/lý do)
+～ないわけにはいかない (nai wake ni wa ikanai) | Không được làm... | Nên làm... | Muốn làm... | Đành phải/Buộc phải làm...
+～どころか (dokoro ka) | Không chỉ... | Phải làm... | Tuy nhiên... | Nói chi đến/Ngược lại với...
+～どころではない (dokoro de wa nai) | Không chỉ... | Nên làm... | Muốn làm... | Không phải lúc/Không thể làm...
+～のみならず (nomi narazu) | Chỉ có... | Thay vì... | Bởi vì... | Không chỉ... mà còn...
+～ばかりか (bakari ka) | Vừa mới... | Bởi vì... | Chỉ có... | Không chỉ... mà còn...
+～はもちろん / はもとより (wa mochiron) | Chỉ có... | Thay vì... | Vì... | ...là đương nhiên, ngoài ra còn...
+～反面 (hanmen) | Đồng thời... | Hơn nữa... | Bởi vì... | Mặt khác/Trái lại...
+～一方で (ippou de) | Trước khi... | Sau khi... | Bởi vì... | Nhưng ngược lại/Đồng thời...
+～に代わって (ni kawatte) | Cùng với... | Để... | Vì... | Thay cho/Đại diện cho...
+～にかわって (ni kawatte) | Vì... | Để... | Mặc dù... | Thay thế cho (vật/người)...
+～反して (hanshite) | Giống như... | Cùng với... | Vì... | Trái ngược với...
+～に反して (ni hanshite) | Để... | Nhờ có... | Vì... | Trái với (dự đoán/quy định)...
+～末に (sue ni) | Trước khi... | Trong khi... | Vì... | Sau rất nhiều... thì cuối cùng...
+～あげく (ageku) | Nhờ có... | Trước khi... | Vì... | Sau một hồi... thì kết cục lại (xấu)
+～きり (kiri) | Thỉnh thoảng... | Sau khi... | Luôn luôn... | Kể từ khi... thì cứ mãi (không đổi)
+～っぱなし (ppanashi) | Làm xong... | Định làm... | Thử làm... | Cứ để nguyên trạng thái... (xấu)
+～にすぎない (ni suginai) | Hơn... | Rất là... | Chắc chắn... | Chẳng qua chỉ là...
+～にほかならない (ni hokanaranai) | Tuy nhiên... | Có lẽ... | Không phải là... | Chính là/Không gì khác ngoài...
+～に越したことはない (ni koshita koto wa nai) | Không nên... | Phải làm... | Mặc dù... | ...vẫn là tốt nhất
+～しかない / ほかない (shika nai) | Không nên... | Muốn làm... | Sẽ làm... | Chỉ còn cách là...
+～べきだ / べきではない (beki da) | Muốn làm... | Sẽ làm... | Thích làm... | Nên làm/Không nên làm (đạo đức)
+～（ら）れる (rareru) | Muốn làm... | Đang làm... | Sẽ làm... | Có thể/Bị/Được (Tự phát/Cảm xúc)
+～ざるを得ない (zaru wo enai) | Nên làm... | Muốn làm... | Có thể làm... | Đành phải/Buộc phải làm...
+～ものか (mono ka) | Phải không... | Đúng không... | Vì... | Nhất định không/Không có chuyện...
+～ないことはない (nai koto wa nai) | Tuyệt đối không... | Nên làm... | Chắc chắn... | Không phải là không... (một chút)
+～ものがある (mono ga aru) | Chắc chắn... | Không có gì... | Sẽ làm... | Có cảm giác/Có yếu tố...
+～まい (mai) | Sẽ làm... | Muốn làm... | Chắc chắn... | Có lẽ không/Quyết không...
+～かいがあって (kai ga atte) | Vì... | Mặc dù... | Tuy nhiên... | Thật bõ công/Kết quả tốt...
+～に決まっている (ni kimatte iru) | Có lẽ... | Không hẳn... | Chưa biết... | Chắc chắn là...
+～に違いない (ni chigai nai) | Có lẽ... | Không hẳn... | Sai rồi... | Chắc chắn là... (suy luận)
+～おそれがある (osore ga aru) | Hy vọng là... | Chắc chắn là... | Có thể là... | E là/Có nguy cơ (kết quả xấu)
+～ことだ (koto da) | Vì... | Mặc dù... | Tuy nhiên... | Nên làm... (khuyên bảo)
+～ことか (koto ka) | Thế nào... | Phải không... | Vì... | Biết bao nhiêu... (cảm thán)
+～ものだ (mono da) | Sẽ làm... | Đang làm... | Định làm... | Là chuyện đương nhiên/Hồi tưởng/Cảm thán
+～というものだ (to iu mono da) | Vì... | Tuy nhiên... | Mặc dù... | Quả thật là...
+～にかかわらず (ni kakawarazu) | Vì... | Mặc dù... | Nếu... | Bất kể/Không phân biệt...
+～を問わず (wo towazu) | Vì... | Để... | Sau khi... | Bất kể/Không màng tới...
+～は抜きにして (wa nuki ni shite) | Cùng với... | Thêm vào... | Vì... | Hãy bỏ qua/Không nói đến...
+～さえ～ば (sae... ba) | Nếu... | Vì... | Tuy nhiên... | Chỉ cần... thì...
+～次第 (shidai) | Vì... | Sau khi... | Trước khi... | Ngay sau khi (xong sẽ làm ngay)
+～次第だ (shidai da) | Đã làm... | Sẽ làm... | Muốn làm... | Chuyện là/Lý do là...
+～からには (kara ni wa) | Tuy là... | Trước khi... | Mặc dù... | Một khi đã... thì...
+～に応えて (ni kotaete) | Trái với... | Vì... | Mặc dù... | Đáp ứng lại/Đền đáp...
+～に沿って (ni sotte) | Trái với... | Vì... | Để... | Men theo/Dọc theo/Theo sát...
+～に基づいて (ni motoduite) | Nhờ có... | Vì... | Trái với... | Dựa trên/Căn cứ vào...
+～をめぐって (wo megutte) | Đối với... | Để... | Vì... | Xoay quanh (vấn đề gì đó)...
+～を通じて / を通して (wo tsuujite) | Vì... | Để... | Sau khi... | Thông qua/Trong suốt khoảng thời gian...
+～に伴って (ni tomonatte) | Trước khi... | Vì... | Tuy nhiên... | Cùng với/Kéo theo (biến đổi đồng thời)...
+～ぬきで (nuki de) | Cùng với... | Vì... | Để... | Mà không có/Bỏ qua...
+～を中心に (wo chuushin ni) | Bỏ qua... | Vì... | Để... | Lấy... làm trung tâm/Trọng tâm...
+～なり (nari) | Trước khi... | Trong khi... | Sau khi... | Ngay sau khi...
+～そばから (soba kara) | Sau một hồi... | Trước khi... | Trong khi... | Vừa mới... thì lại... (lặp lại nhiều lần)
+～がてら (gatera) | Vì... | Sau khi... | Trước khi... | Nhân tiện/Đồng thời...
+～かたがた (katagata) | Chỉ vì... | Mặc dù... | Tuy nhiên... | Nhân tiện/Kiêm luôn... (trang trọng)
+～かたわら (katawara) | Trước khi... | Sau khi... | Vì... | Bên cạnh công việc chính thì còn...
+～が早いか (ga hayai ka) | Sau một lúc... | Trước khi... | Trong khi... | Vừa mới... xong là ngay lập tức
+～や否や (ya ina ya) | Sẽ làm... | Đang làm... | Định làm... | Vừa mới... thì ngay lập tức
+～なり～なり (nari... nari) | Càng... càng... | Vì... nên... | Mặc dù... | Hoặc là... hoặc là...
+～つ～つ (tsu... tsu) | Lúc thì... | Vì... | Sau khi... | Lúc thì... lúc thì... (hành động đối lập)
+～であれ～であれ (de are... de are) | Vì... | Tuy nhiên... | Nếu... | Dù là... hay là...
+～といい～といい (to ii... to ii) | Vì... | Tuy nhiên... | Mặc dù... | Cả... lẫn... (đánh giá tốt/xấu)
+～といわず～といわず (to iwazu... to iwazu) | Không chỉ... | Vì... | Tuy là... | Bất kể... bất kể... (không phân biệt thời gian/không gian)
+～にかかわる (ni kakawaru) | Vì... | Để... | Sau khi... | Ảnh hưởng đến/Liên quan đến...
+～あっての (atte no) | Mặc dù... | Chỉ vì... | Sau khi... | Chính vì có... mới có...
+～ゆえに (yue ni) | Mặc dù... | Tuy nhiên... | Nếu... | Chính vì... (trang trọng)
+～がゆえに (ga yue ni) | Tuy nhiên... | Nhưng... | Để... | Bởi vì...
+～んばかりに (n banari ni) | Đã làm... | Sắp làm... | Vì... | Tưởng chừng như/Gần như là...
+～んがため (n ga tame) | Vì... | Tuy nhiên... | Mặc dù... | Để/Với mục đích...
+～べからず (bekarazu) | Phải làm... | Được làm... | Nên làm... | Không được phép/Cấm...
+～まじき (majiki) | Có thể... | Nên... | Phải... | Không thể chấp nhận được/Không được phép...
+～べく (beku) | Vì... | Mặc dù... | Sau khi... | Để/Với mục định...
+～べくもない (beku mo nai) | Chắc chắn... | Có lẽ... | Nên làm... | Làm sao có thể/Không thể nào...
+～を禁じ得ない (wo kinji enai) | Phải làm... | Sẽ làm... | Đang làm... | Không thể kiềm nén được...
+～を余儀なくされる (wo yogi naku sareru) | Được làm... | Muốn làm... | Nên làm... | Buộc phải/Đành phải...
+～を皮切りに (wo kawakiri ni) | Trước khi... | Sau khi... | Vì... | Bắt đầu từ... (sau đó lan rộng)
+～に至るまで (ni itaru made) | Từ... | Trong khi... | Vì... | Cho đến tận/Đến mức...
+～をもって (wo motte) | Vì... | Sau khi... | Mặc dù... | Bằng/Vào thời điểm... (trang trọng)
+～といったところだ (to itta tokoro da) | Chắc chắn... | Luôn luôn... | Rất là... | Đại khái khoảng/Cùng lắm cũng chỉ...
+～はおろか (wa oroka) | Ngay cả... | Vì... | Tuy nhiên... | Ngay cả... cũng không nói gì đến...
+～にたえる (ni taeru) | Không thể... | Chắc chắn... | Sẽ làm... | Đáng để/Có thể chịu đựng...
+～にたえない (ni taenai) | Đáng để... | Có thể... | Nên làm... | Không thể chịu đựng nổi/Rất...
+～に足る (ni taru) | Không thể... | Sẽ làm... | Vì... | Đáng để/Đủ để...
+～に照らして (ni terashite) | Trái với... | Vì... | Mặc dù... | So chiếu với/Căn cứ vào...
+～に即して (ni sokushite) | Khác với... | Vì... | Mặc dù... | Hợp với/Tuân thủ theo...
+～にひきかえ (ni hikikae) | Giống như... | Cùng với... | Vì... | Trái ngược hoàn toàn với...
+～にもまして (ni mo mashite) | Giống như... | Kém hơn... | Vì... | Hơn cả/So với...
+～はおろか (wa oroka) | Chỉ có... | Vì... | Nếu... | ...thì đã đành, đằng này ngay cả...
+～ずにはすまない (zu ni wa sumanai) | Không được làm... | Nên làm... | Muốn làm... | Không thể không/Phải làm...
+～ないではおかない (nai de wa okanai) | Sẽ không làm... | Nên làm... | Đang làm... | Nhất định phải làm...
+～禁じ得ない (kinji enai) | Có thể... | Sẽ làm... | Nên làm... | Không nén nổi (cảm xúc)...
+～余儀なくされる (yogi naku sareru) | Được làm... | Muốn làm... | Nên làm... | Buộc phải...
+～に極まる (ni kiwamaru) | Một chút... | Vừa đủ... | Bình thường... | Cực kỳ/Hết sức...
+～の極み (no kiwami) | Một chút... | Đã xong... | Vì... | Cực kỳ/Tột cùng...
+～の至り (no itari) | Một chút... | Vì... | Tuy nhiên... | Vô cùng/Hết sức... (vinh dự/hổ thẹn)
+～こととて (koto to te) | Tuy nhiên... | Mặc dù... | Nếu... | Vì... (trang trọng/biện hộ)
+～べくして (beku shite) | Không thể... | Chắc chắn không... | Nên làm... | Chuyện gì đến phải đến/Tất yếu...
+～ないものか (nai mono ka) | Tuyệt đối không... | Chắc chắn... | Nên làm... | Liệu có cách nào... không nhỉ? (mong muốn)
+～たが最後 (ta ga saigo) | Sau khi... | Trước khi... | Trong khi... | Một khi đã... thì (kết quả xấu)
+～まじき (majiki) | Nên làm... | Được phép... | Phải làm... | Không được phép/Không thể chấp nhận...
+～ともなれば (tomo nareba) | Nếu... | Vì... | Tuy nhiên... | Một khi đã thành... thì...
+    `;
+
+    // --- HẾT PHẦN DÁN DỮ LIỆU ---
+
+    let currentMode = "TuVung";
+    let quizData = [];
+    let currentQuestion = null;
+    let score = 0, totalQuestions = 0, timer = null;
+
+    function init() { switchMode('TuVung'); }
+
+    function switchMode(mode) {
+        currentMode = mode;
+        document.getElementById("btn-tuvung").className = "mode-btn " + (mode === "TuVung" ? "active" : "");
+        document.getElementById("btn-nguphap").className = "mode-btn " + (mode === "NguPhap" ? "active-ng" : "");
+        const raw = mode === "TuVung" ? dataTuVung : dataNguPhap;
+        parse(raw);
+        score = 0; totalQuestions = 0;
+        document.getElementById("score").innerText = "Điểm: 0/0";
+        nextQuestion();
+    }
+
+    function parse(text) {
+        quizData = [];
+        text.split("\n").forEach(line => {
+            const p = line.split("|").map(x => x.trim());
+            if (p.length === 5) quizData.push({q: p[0], a: p[1], c: [p[2], p[3], p[4]]});
+        });
+    }
+
+    function nextQuestion() {
+        clearTimeout(timer);
+        document.getElementById("next-btn").style.display = "none";
+        document.getElementById("result").innerText = "Chọn một đáp án!";
+        document.getElementById("result").style.color = "#7f8c8d";
+        if (quizData.length === 0) { document.getElementById("question").innerText = "Không có dữ liệu!"; return; }
+        currentQuestion = quizData[Math.floor(Math.random() * quizData.length)];
+        document.getElementById("question").innerText = currentQuestion.q;
+        let choices = [...currentQuestion.c, currentQuestion.a].sort(() => Math.random() - 0.5);
+        document.querySelectorAll(".choice-btn").forEach((btn, i) => {
+            btn.innerText = choices[i];
+            btn.className = "choice-btn";
+            btn.disabled = false;
+        });
+    }
+
+    function checkAnswer(idx) {
+        const btns = document.querySelectorAll(".choice-btn");
+        const sel = btns[idx].innerText;
+        totalQuestions++;
+        btns.forEach(b => b.disabled = true);
+        document.getElementById("next-btn").style.display = "block";
+        if (sel === currentQuestion.a) {
+            score++; btns[idx].classList.add("correct");
+            res("Chính xác! 🎉", "#27ae60");
+        } else {
+            btns[idx].classList.add("wrong");
+            btns.forEach(b => { if(b.innerText === currentQuestion.a) b.classList.add("correct"); });
+            res("Sai rồi! ❌", "#c0392b");
+        }
+        document.getElementById("score").innerText = `Điểm: ${score}/${totalQuestions}`;
+        timer = setTimeout(nextQuestion, 4000);
+    }
+
+    function res(t, c) { 
+        document.getElementById("result").innerText = t; 
+        document.getElementById("result").style.color = c; 
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
